@@ -72,6 +72,27 @@ form.panel.panel-default(name='memory' novalidate)
                 .settings-row
                     ignite-form-field
                         ignite-form-field-label
+                            | Eviction policy:
+                        ignite-form-field-tooltip
+                            | Optional cache eviction policy#[br]
+                            | Must be set for entries to be evicted from on-heap to off-heap or swap
+                        ignite-form-field-dropdown(
+                            data-id='kind'
+                            data-name='kind'
+                            data-options='[\
+                                {value: "LRU", label: "LRU"},\
+                                {value: "FIFO", label: "FIFO"},\
+                                {value: "SORTED", label: "Sorted"},\
+                                {value: undefined, label: "Not set"}\
+                            ]'
+                            data-ng-model='#{model}.evictionPolicy.kind'
+                        )
+                    span(ng-if='#{model}.evictionPolicy.kind')
+                        a.customize(ng-show='__.expanded' ng-click='__.expanded = false') Hide settings
+                        a.customize(ng-hide='__.expanded' ng-click='__.expanded = true') Show settings
+                .settings-row
+                    ignite-form-field
+                        ignite-form-field-label
                             | Start size:
                         ignite-form-field-tooltip
                             | Initial cache size which will be used to pre-create internal hash table after start

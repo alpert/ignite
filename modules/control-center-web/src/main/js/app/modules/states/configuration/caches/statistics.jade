@@ -19,74 +19,33 @@
 form.panel.panel-default(name='store' novalidate)
     .panel-heading(bs-collapse-toggle)
         ignite-form-panel-chevron
-        label Store
+        label Statistics
+        ignite-form-field-tooltip.tipLabel
+            | Cache statistics and management settings
         ignite-form-revert
     .panel-collapse(role='tabpanel' bs-collapse-target id='store')
         .panel-body
             .col-sm-6
                 .settings-row
-                    ignite-form-field
-                        ignite-form-field-label
-                            | Name:
-                        ignite-form-field-tooltip
-                            | Cache name
-                        ignite-form-field-input-text(
-                            data-id='cacheName'
-                            data-name='cacheName'
-                            data-ng-model='#{model}.name'
-                            data-ng-required='true'
-                            data-placeholder='Input name'
+                    ignite-form-field.checkbox
+                        ignite-form-field-input-checkbox(
+                            data-id='statisticsEnabled'
+                            data-name='statisticsEnabled'
+                            data-ng-model='#{model}.statisticsEnabled'
                         )
+                        | Statistics enabled
+                        ignite-form-field-tooltip
+                            | Flag indicating whether statistics gathering is enabled on a cache
                 .settings-row
-                    ignite-form-field
-                        ignite-form-field-label
-                            | Clusters: #[a(ui-sref='base.configuration.clusters({id: #{model}._id})') (add)]
-                        ignite-form-field-tooltip
-                            | Associate clusters with the current cache
-                        ignite-form-field-dropdown(
-                            data-id='clusters'
-                            data-name='clusters'
-                            data-options='clusters'
-                            data-multiple='true'
-                            data-ng-model='#{model}.clusters'
-                            data-ng-disabled='!clusters.length'
-                            data-placeholder='{{ clusters.length ? "Choose clusters": "No clusters configured" }}'
+                    ignite-form-field.checkbox
+                        ignite-form-field-input-checkbox(
+                            data-id='managementEnabled'
+                            data-name='managementEnabled'
+                            data-ng-model='#{model}.managementEnabled'
                         )
-                .settings-row
-                    ignite-form-field
-                        ignite-form-field-label
-                            | Domain models: #[a(ui-sref='base.configuration.domains({id: #{model}._id})') (add)]
+                        | Management enabled
                         ignite-form-field-tooltip
-                            | Associate clusters with the current cache
-                        ignite-form-field-dropdown(
-                            data-id='domains'
-                            data-name='domains'
-                            data-options='domains'
-                            data-multiple='true'
-                            data-ng-model='#{model}.domains'
-                            data-ng-disabled='!domains.length'
-                            data-placeholder='{{ domains.length ? "Choose domain models": "No domain models configured" }}'
-                        )
-                .settings-row
-                    ignite-form-field
-                        ignite-form-field-label
-                            | Cache mode:
-                        ignite-form-field-tooltip
-                            | Cache modes:
-                            ul: li Partitioned - in this mode the overall key set will be divided into partitions and all partitions will be split equally between participating nodes
-                                li Replicated - in this mode all the keys are distributed to all participating nodes
-                                li Local - in this mode caches residing on different grid nodes will not know about each other
-                        ignite-form-field-dropdown(
-                        data-id='cacheMode'
-                        data-name='cacheMode'
-                        data-options='[\
-                            {value: "LOCAL", label: "LOCAL"},\
-                            {value: "REPLICATED", label: "REPLICATED"},\
-                            {value: "PARTITIONED", label: "PARTITIONED"}\
-                        ]'
-                        data-ng-model='#{model}.cacheMode'
-                        data-placeholder='PARTITIONED'
-                        )
+                            | Flag indicating whether management is enabled on this cache
             ignite-ui-ace.col-sm-6
                 .preview-panel(ng-init='mode = false')
                     .preview-legend

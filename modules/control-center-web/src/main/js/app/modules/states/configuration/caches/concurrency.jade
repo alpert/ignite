@@ -20,6 +20,8 @@ form.panel.panel-default(name='concurrency' novalidate)
     .panel-heading(bs-collapse-toggle)
         ignite-form-panel-chevron
         label Concurrency control
+        ignite-form-field-tooltip.tipLabel
+            | Cache concurrent usage settings
         ignite-form-revert
     .panel-collapse(role='tabpanel' bs-collapse-target id='concurrency')
         .panel-body
@@ -27,65 +29,68 @@ form.panel.panel-default(name='concurrency' novalidate)
                 .settings-row
                     ignite-form-field
                         ignite-form-field-label
-                            | Name:
+                            | Max async operations:
                         ignite-form-field-tooltip
-                            | Cache name
-                        ignite-form-field-input-text(
-                            data-id='cacheName'
-                            data-name='cacheName'
-                            data-ng-model='#{model}.name'
-                            data-ng-required='true'
-                            data-placeholder='Input name'
+                            | Maximum number of allowed concurrent asynchronous operations#[br]
+                            | If 0 then number of concurrent asynchronous operations is unlimited
+                        ignite-form-field-input-number(
+                            data-id='maxConcurrentAsyncOperations'
+                            data-name='maxConcurrentAsyncOperations'
+                            data-ng-model='#{model}.maxConcurrentAsyncOperations'
+                            data-placeholder='500'
+                            data-min='0'
                         )
                 .settings-row
                     ignite-form-field
                         ignite-form-field-label
-                            | Clusters: #[a(ui-sref='base.configuration.clusters({id: #{model}._id})') (add)]
+                            | Default lock timeout:
                         ignite-form-field-tooltip
-                            | Associate clusters with the current cache
+                            | Default lock acquisition timeout
+                            | If 0 then lock acquisition will never timeout
+                        ignite-form-field-input-number(
+                            data-id='defaultLockTimeout'
+                            data-name='defaultLockTimeout'
+                            data-ng-model='#{model}.defaultLockTimeout'
+                            data-placeholder='0'
+                            data-min='0'
+                        )
+                .settings-row(ng-hide='#{model}.atomicityMode === "TRANSACTIONAL"')
+                    ignite-form-field
+                        ignite-form-field-label
+                            | Entry versioning:
+                        ignite-form-field-tooltip
+                            | Write ordering mode determines which node assigns the write version, sender or the primary node:
+                            ul: li CLOCK - in this mode write versions are assigned on a sender node which generally leads to better performance
+                                li PRIMARY - in this mode version is assigned only on primary node. This means that sender will only send write request to primary node, which in turn will assign write version and forward it to backups
                         ignite-form-field-dropdown(
-                            data-id='clusters'
-                            data-name='clusters'
-                            data-options='clusters'
-                            data-multiple='true'
-                            data-ng-model='#{model}.clusters'
-                            data-ng-disabled='!clusters.length'
-                            data-placeholder='{{ clusters.length ? "Choose clusters": "No clusters configured" }}'
+                            data-id='atomicWriteOrderMode'
+                            data-name='atomicWriteOrderMode'
+                            data-options='[\
+                                {value: "CLOCK", label: "CLOCK"},\
+                                {value: "PRIMARY", label: "PRIMARY"}\
+                            ]'
+                            data-ng-model='#{model}.atomicWriteOrderMode'
+                            data-placeholder='Choose versioning'
                         )
                 .settings-row
                     ignite-form-field
                         ignite-form-field-label
-                            | Domain models: #[a(ui-sref='base.configuration.domains({id: #{model}._id})') (add)]
+                            | Write synchronization mode:
                         ignite-form-field-tooltip
-                            | Associate clusters with the current cache
+                            | Write synchronization mode:
+                            ul: li FULL_SYNC - Ignite will wait for write or commit replies from all nodes
+                                li FULL_ASYNC - Ignite will not wait for write or commit responses from participating nodes
+                                li PRIMARY_SYNC - Makes sense for PARTITIONED mode. Ignite will wait for write or commit to complete on primary node
                         ignite-form-field-dropdown(
-                            data-id='domains'
-                            data-name='domains'
-                            data-options='domains'
-                            data-multiple='true'
-                            data-ng-model='#{model}.domains'
-                            data-ng-disabled='!domains.length'
-                            data-placeholder='{{ domains.length ? "Choose domain models": "No domain models configured" }}'
-                        )
-                .settings-row
-                    ignite-form-field
-                        ignite-form-field-label
-                            | Cache mode:
-                        ignite-form-field-tooltip
-                            | Cache modes:
-                            ul: li Partitioned - in this mode the overall key set will be divided into partitions and all partitions will be split equally between participating nodes
-                                li Replicated - in this mode all the keys are distributed to all participating nodes
-                                li Local - in this mode caches residing on different grid nodes will not know about each other
-                        ignite-form-field-dropdown(
-                        data-id='cacheMode'
-                        data-name='cacheMode'
-                        data-options='[\
-                            {value: "LOCAL", label: "LOCAL"},\
-                            {value: "REPLICATED", label: "REPLICATED"},\
-                            {value: "PARTITIONED", label: "PARTITIONED"}\
-                        ]'
-                        data-ng-model='#{model}.cacheMode'
-                        data-placeholder='PARTITIONED'
+                            data-id='writeSynchronizationMode'
+                            data-name='writeSynchronizationMode'
+                            data-options='[\
+                                {value: "FULL_SYNC", label: "FULL_SYNC"},\
+                                {value: "FULL_ASYNC", label: "FULL_ASYNC"},\
+                                {value: "PRIMARY_SYNC", label: "PRIMARY_SYNC"}\
+                            ]'
+                            data-ng-model='#{model}.writeSynchronizationMode'
+                            data-placeholder='PRIMARY_SYNC'
                         )
             ignite-ui-ace.col-sm-6
                 .preview-panel(ng-init='mode = false')
