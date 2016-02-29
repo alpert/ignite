@@ -26,8 +26,10 @@ import javax.cache.configuration.Factory;
 import javax.cache.event.CacheEntryEventFilter;
 import javax.cache.event.CacheEntryUpdatedListener;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.cache.CacheEntryEventSerializableFilter;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.IgniteDeploymentCheckedException;
+import org.apache.ignite.internal.managers.deployment.GridDeployment;
+import org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryManager.JCacheRemoteQueryFactory;
 import org.apache.ignite.internal.processors.continuous.GridContinuousHandler;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -40,13 +42,13 @@ public class CacheContinuousQueryHandlerV2<K, V> extends CacheContinuousQueryHan
     private static final long serialVersionUID = 0L;
 
     /** Remote filter factory. */
-    private Factory<? extends CacheEntryEventSerializableFilter<K, V>> rmtFilterFactory;
+    private Factory<? extends CacheEntryEventFilter> rmtFilterFactory;
 
     /** Deployable object for filter factory. */
     private DeployableObject rmtFilterFactoryDep;
 
     /** */
-    protected transient CacheEntryEventFilter<K, V> rmtNonSerFilter;
+    protected transient CacheEntryEventFilter filter;
 
     /**
      * Required by {@link Externalizable}.
@@ -76,7 +78,7 @@ public class CacheContinuousQueryHandlerV2<K, V> extends CacheContinuousQueryHan
         String cacheName,
         Object topic,
         CacheEntryUpdatedListener<K, V> locLsnr,
-        Factory<? extends CacheEntryEventSerializableFilter<K, V>> rmtFilterFactory,
+        Factory<? extends CacheEntryEventFilter<K, V>> rmtFilterFactory,
         boolean internal,
         boolean notifyExisting,
         boolean oldValRequired,
@@ -108,14 +110,14 @@ public class CacheContinuousQueryHandlerV2<K, V> extends CacheContinuousQueryHan
     }
 
     /** {@inheritDoc} */
-    @Override protected CacheEntryEventFilter<K, V> getRemoteFilter() {
-        if (rmtNonSerFilter == null) {
+    @Override public CacheEntryEventFilter getEventFilter() {
+        if (filter == null) {
             assert rmtFilterFactory != null;
 
-            rmtNonSerFilter = rmtFilterFactory.create();
+            filter = rmtFilterFactory.create();
         }
 
-        return rmtNonSerFilter;
+        return filter;
     }
 
     /** {@inheritDoc} */
@@ -168,6 +170,6 @@ public class CacheContinuousQueryHandlerV2<K, V> extends CacheContinuousQueryHan
         if (b)
             rmtFilterFactoryDep = (DeployableObject)in.readObject();
         else
-            rmtFilterFactory = (Factory<CacheEntryEventSerializableFilter<K, V>>)in.readObject();
+            rmtFilterFactory = (Factory)in.readObject();
     }
 }

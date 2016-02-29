@@ -24,6 +24,7 @@ import java.io.ObjectOutput;
 import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
+import javax.cache.event.CacheEntryEventFilter;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.managers.deployment.GridDeployment;
 import org.apache.ignite.internal.managers.deployment.GridDeploymentInfoBean;
@@ -127,6 +128,11 @@ public class GridMessageListenHandler implements GridContinuousHandler {
     /** {@inheritDoc} */
     @Override public void updateCounters(AffinityTopologyVersion topVer, Map<Integer, Long> cntrs) {
         // No-op.
+    }
+
+    /** {@inheritDoc} */
+    @Override public CacheEntryEventFilter getEventFilter() {
+        return null;
     }
 
     /** {@inheritDoc} */

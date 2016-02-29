@@ -21,69 +21,47 @@ import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.SortedMap;
-import java.util.TreeMap;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import javax.cache.Cache;
+import java.util.concurrent.ThreadLocalRandom;
+import javax.cache.configuration.CacheEntryListenerConfiguration;
 import javax.cache.configuration.Factory;
 import javax.cache.configuration.FactoryBuilder;
-import javax.cache.configuration.FactoryBuilder.SingletonFactory;
+import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
+import javax.cache.event.CacheEntryCreatedListener;
 import javax.cache.event.CacheEntryEvent;
-import javax.cache.event.CacheEntryEventFilter;
+import javax.cache.event.CacheEntryExpiredListener;
 import javax.cache.event.CacheEntryListenerException;
+import javax.cache.event.CacheEntryRemovedListener;
 import javax.cache.event.CacheEntryUpdatedListener;
-import javax.cache.integration.CacheLoaderException;
-import javax.cache.integration.CacheWriterException;
-import javax.cache.processor.EntryProcessor;
-import javax.cache.processor.MutableEntry;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheEntryEventSerializableFilter;
-import org.apache.ignite.cache.CacheMemoryMode;
-import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.affinity.Affinity;
 import org.apache.ignite.cache.query.CacheQueryEntryEvent;
 import org.apache.ignite.cache.query.ContinuousQuery;
 import org.apache.ignite.cache.query.QueryCursor;
-import org.apache.ignite.cache.store.CacheStore;
-import org.apache.ignite.cache.store.CacheStoreAdapter;
 import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.util.typedef.internal.S;
-import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
-import org.apache.ignite.spi.discovery.tcp.ipfinder.TcpDiscoveryIpFinder;
-import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
-import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryRandomOperationsTest.QueryTestKey;
+import org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryRandomOperationsTest.QueryTestValue;
+import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.apache.ignite.cache.CacheAtomicWriteOrderMode.PRIMARY;
-import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
-import static org.apache.ignite.cache.CacheMemoryMode.OFFHEAP_TIERED;
-import static org.apache.ignite.cache.CacheMemoryMode.OFFHEAP_VALUES;
-import static org.apache.ignite.cache.CacheMemoryMode.ONHEAP_TIERED;
-import static org.apache.ignite.cache.CacheMode.PARTITIONED;
-import static org.apache.ignite.cache.CacheMode.REPLICATED;
-import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
-import static org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryFactoryFilterTest.ContinuousDeploy.ALL;
-import static org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryFactoryFilterTest.ContinuousDeploy.CLIENT;
-import static org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryFactoryFilterTest.ContinuousDeploy.SERVER;
 import static org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryFactoryFilterTest.NonSerializableFilter.isAccepted;
+import static org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryRandomOperationsTest.ContinuousDeploy.CLIENT;
+import static org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryRandomOperationsTest.ContinuousDeploy.SERVER;
 import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED;
 import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
 import static org.apache.ignite.transactions.TransactionIsolation.SERIALIZABLE;
@@ -91,10 +69,7 @@ import static org.apache.ignite.transactions.TransactionIsolation.SERIALIZABLE;
 /**
  *
  */
-public class CacheContinuousQueryFactoryFilterTest extends GridCommonAbstractTest {
-    /** */
-    private static TcpDiscoveryIpFinder ipFinder = new TcpDiscoveryVmIpFinder(true);
-
+public class CacheContinuousQueryFactoryFilterTest extends CacheContinuousQueryRandomOperationsTest {
     /** */
     private static final int NODES = 5;
 
@@ -105,488 +80,10 @@ public class CacheContinuousQueryFactoryFilterTest extends GridCommonAbstractTes
     private static final int VALS = 10;
 
     /** */
-    public static final int ITERATION_CNT = 100;
-
-    /** */
-    private boolean client;
+    public static final int ITERATION_CNT = 40;
 
     /** {@inheritDoc} */
-    @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
-        IgniteConfiguration cfg = super.getConfiguration(gridName);
-
-        ((TcpDiscoverySpi)cfg.getDiscoverySpi()).setIpFinder(ipFinder);
-
-        cfg.setClientMode(client);
-
-        return cfg;
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void beforeTestsStarted() throws Exception {
-        super.beforeTestsStarted();
-
-        startGridsMultiThreaded(NODES - 1);
-
-        client = true;
-
-        startGrid(NODES - 1);
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTestsStopped() throws Exception {
-        stopAllGrids();
-
-        super.afterTestsStopped();
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    public void testAtomicClient() throws Exception {
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(PARTITIONED,
-            1,
-            ATOMIC,
-            ONHEAP_TIERED,
-            false);
-
-        testContinuousQuery(ccfg, CLIENT);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    public void testAtomic() throws Exception {
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(PARTITIONED,
-            1,
-            ATOMIC,
-            ONHEAP_TIERED,
-            false);
-
-        testContinuousQuery(ccfg, SERVER);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    public void testAtomicAllNodes() throws Exception {
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(PARTITIONED,
-            1,
-            ATOMIC,
-            ONHEAP_TIERED,
-            false);
-
-        testContinuousQuery(ccfg, ALL);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    public void testAtomicReplicated() throws Exception {
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(REPLICATED,
-            0,
-            ATOMIC,
-            ONHEAP_TIERED,
-            false);
-
-        testContinuousQuery(ccfg, SERVER);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    public void testAtomicReplicatedAllNodes() throws Exception {
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(REPLICATED,
-            0,
-            ATOMIC,
-            ONHEAP_TIERED,
-            false);
-
-        testContinuousQuery(ccfg, ALL);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    public void testAtomicReplicatedClient() throws Exception {
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(REPLICATED,
-            0,
-            ATOMIC,
-            ONHEAP_TIERED,
-            false);
-
-        testContinuousQuery(ccfg, CLIENT);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    public void testAtomicOffheapValues() throws Exception {
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(PARTITIONED,
-            1,
-            ATOMIC,
-            OFFHEAP_VALUES,
-            false);
-
-        testContinuousQuery(ccfg, SERVER);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    public void testAtomicOffheapValuesAllNodes() throws Exception {
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(PARTITIONED,
-            1,
-            ATOMIC,
-            OFFHEAP_VALUES,
-            false);
-
-        testContinuousQuery(ccfg, ALL);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    public void testAtomicOffheapValuesClient() throws Exception {
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(PARTITIONED,
-            1,
-            ATOMIC,
-            OFFHEAP_VALUES,
-            false);
-
-        testContinuousQuery(ccfg, CLIENT);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    public void testAtomicOffheapTiered() throws Exception {
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(PARTITIONED,
-            1,
-            ATOMIC,
-            OFFHEAP_TIERED,
-            false);
-
-        testContinuousQuery(ccfg, SERVER);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    public void testAtomicOffheapTieredAllNodes() throws Exception {
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(PARTITIONED,
-            1,
-            ATOMIC,
-            OFFHEAP_TIERED,
-            false);
-
-        testContinuousQuery(ccfg, ALL);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    public void testAtomicOffheapTieredClient() throws Exception {
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(PARTITIONED,
-            1,
-            ATOMIC,
-            OFFHEAP_TIERED,
-            false);
-
-        testContinuousQuery(ccfg, CLIENT);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    public void testAtomicNoBackups() throws Exception {
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(PARTITIONED,
-            0,
-            ATOMIC,
-            ONHEAP_TIERED,
-            false);
-
-        testContinuousQuery(ccfg, SERVER);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    public void testAtomicNoBackupsAllNodes() throws Exception {
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(PARTITIONED,
-            0,
-            ATOMIC,
-            ONHEAP_TIERED,
-            false);
-
-        testContinuousQuery(ccfg, ALL);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    public void testAtomicNoBackupsClient() throws Exception {
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(PARTITIONED,
-            0,
-            ATOMIC,
-            ONHEAP_TIERED,
-            false);
-
-        testContinuousQuery(ccfg, CLIENT);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    public void testTx() throws Exception {
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(PARTITIONED,
-            1,
-            TRANSACTIONAL,
-            ONHEAP_TIERED,
-            false);
-
-        testContinuousQuery(ccfg, SERVER);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    public void testTxAllNodes() throws Exception {
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(PARTITIONED,
-            1,
-            TRANSACTIONAL,
-            ONHEAP_TIERED,
-            false);
-
-        testContinuousQuery(ccfg, ALL);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    public void testTxExplicit() throws Exception {
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(PARTITIONED,
-            1,
-            TRANSACTIONAL,
-            ONHEAP_TIERED,
-            false);
-
-        testContinuousQuery(ccfg, SERVER);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    public void testTxClient() throws Exception {
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(PARTITIONED,
-            1,
-            TRANSACTIONAL,
-            ONHEAP_TIERED,
-            false);
-
-        testContinuousQuery(ccfg, CLIENT);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    public void testTxClientExplicit() throws Exception {
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(PARTITIONED,
-            1,
-            TRANSACTIONAL,
-            ONHEAP_TIERED,
-            false);
-
-        testContinuousQuery(ccfg, CLIENT);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    public void testTxReplicated() throws Exception {
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(REPLICATED,
-            0,
-            TRANSACTIONAL,
-            ONHEAP_TIERED,
-            false);
-
-        testContinuousQuery(ccfg, SERVER);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    public void testTxReplicatedClient() throws Exception {
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(REPLICATED,
-            0,
-            TRANSACTIONAL,
-            ONHEAP_TIERED,
-            false);
-
-        testContinuousQuery(ccfg, CLIENT);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    public void testTxOffheapValues() throws Exception {
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(PARTITIONED,
-            1,
-            TRANSACTIONAL,
-            OFFHEAP_VALUES,
-            false);
-
-        testContinuousQuery(ccfg, SERVER);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    public void testTxOffheapValuesAllNodes() throws Exception {
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(PARTITIONED,
-            1,
-            TRANSACTIONAL,
-            OFFHEAP_VALUES,
-            false);
-
-        testContinuousQuery(ccfg, ALL);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    public void testTxOffheapValuesExplicit() throws Exception {
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(PARTITIONED,
-            1,
-            TRANSACTIONAL,
-            OFFHEAP_VALUES,
-            false);
-
-        testContinuousQuery(ccfg, SERVER);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    public void testTxOffheapValuesClient() throws Exception {
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(PARTITIONED,
-            1,
-            TRANSACTIONAL,
-            OFFHEAP_VALUES,
-            false);
-
-        testContinuousQuery(ccfg, CLIENT);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    public void testTxOffheapTiered() throws Exception {
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(PARTITIONED,
-            1,
-            TRANSACTIONAL,
-            OFFHEAP_TIERED,
-            false);
-
-        testContinuousQuery(ccfg, SERVER);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    public void testTxOffheapTieredAllNodes() throws Exception {
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(PARTITIONED,
-            1,
-            TRANSACTIONAL,
-            OFFHEAP_TIERED,
-            false);
-
-        testContinuousQuery(ccfg, ALL);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    public void testTxOffheapTieredClient() throws Exception {
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(PARTITIONED,
-            1,
-            TRANSACTIONAL,
-            OFFHEAP_TIERED,
-            false);
-
-        testContinuousQuery(ccfg, CLIENT);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    public void testTxOffheapTieredClientExplicit() throws Exception {
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(PARTITIONED,
-            1,
-            TRANSACTIONAL,
-            OFFHEAP_TIERED,
-            false);
-
-        testContinuousQuery(ccfg, CLIENT);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    public void testTxNoBackups() throws Exception {
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(PARTITIONED,
-            0,
-            TRANSACTIONAL,
-            ONHEAP_TIERED,
-            false);
-
-        testContinuousQuery(ccfg, SERVER);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    public void testTxNoBackupsAllNodes() throws Exception {
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(PARTITIONED,
-            0,
-            TRANSACTIONAL,
-            ONHEAP_TIERED,
-            false);
-
-        testContinuousQuery(ccfg, ALL);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    public void testTxNoBackupsExplicit() throws Exception {
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(PARTITIONED,
-            0,
-            TRANSACTIONAL,
-            ONHEAP_TIERED,
-            false);
-
-        testContinuousQuery(ccfg, SERVER);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    public void testTxNoBackupsClient() throws Exception {
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(PARTITIONED,
-            0,
-            TRANSACTIONAL,
-            ONHEAP_TIERED,
-            false);
-
-        testContinuousQuery(ccfg, CLIENT);
-    }
-
-    /**
-     * @param ccfg Cache configuration.
-     * @param deploy The place where continuous query will be started.
-     * @throws Exception If failed.
-     */
-    private void testContinuousQuery(CacheConfiguration<Object, Object> ccfg, ContinuousDeploy deploy)
+    @Override protected void testContinuousQuery(CacheConfiguration<Object, Object> ccfg, ContinuousDeploy deploy)
         throws Exception {
         ignite(0).createCache(ccfg);
 
@@ -601,70 +98,18 @@ public class CacheContinuousQueryFactoryFilterTest extends GridCommonAbstractTes
 
             Collection<QueryCursor<?>> curs = new ArrayList<>();
 
-            if (deploy == CLIENT) {
-                ContinuousQuery<QueryTestKey, QueryTestValue> qry = new ContinuousQuery<>();
+            Collection<T2<Integer, MutableCacheEntryListenerConfiguration>> lsnrCfgs = new ArrayList<>();
 
-                final BlockingQueue<CacheEntryEvent<?, ?>> evtsQueue = new ArrayBlockingQueue<>(50_000);
-
-                qry.setLocalListener(new CacheEntryUpdatedListener<QueryTestKey, QueryTestValue>() {
-                    @Override public void onUpdated(Iterable<CacheEntryEvent<? extends QueryTestKey,
-                        ? extends QueryTestValue>> evts) throws CacheEntryListenerException {
-                        for (CacheEntryEvent<?, ?> evt : evts)
-                            evtsQueue.add(evt);
-                    }
-                });
-
-                qry.setRemoteFilterFactory(new FilterFactory());
-
-                evtsQueues.add(evtsQueue);
-
-                QueryCursor<?> cur = grid(NODES - 1).cache(ccfg.getName()).query(qry);
-
-                curs.add(cur);
-            }
-            else if (deploy == SERVER) {
-                ContinuousQuery<QueryTestKey, QueryTestValue> qry = new ContinuousQuery<>();
-
-                final BlockingQueue<CacheEntryEvent<?, ?>> evtsQueue = new ArrayBlockingQueue<>(50_000);
-
-                qry.setLocalListener(new CacheEntryUpdatedListener<QueryTestKey, QueryTestValue>() {
-                    @Override public void onUpdated(Iterable<CacheEntryEvent<? extends QueryTestKey,
-                        ? extends QueryTestValue>> evts) throws CacheEntryListenerException {
-                        for (CacheEntryEvent<?, ?> evt : evts)
-                            evtsQueue.add(evt);
-                    }
-                });
-
-                qry.setRemoteFilterFactory(new FilterFactory());
-
-                evtsQueues.add(evtsQueue);
-
-                QueryCursor<?> cur = grid(rnd.nextInt(NODES - 1)).cache(ccfg.getName()).query(qry);
-
-                curs.add(cur);
-            }
+            if (deploy == CLIENT)
+                evtsQueues.add(registerListener(ccfg.getName(), NODES - 1, curs, lsnrCfgs, rnd.nextBoolean()));
+            else if (deploy == SERVER)
+                evtsQueues.add(registerListener(ccfg.getName(), rnd.nextInt(NODES - 1), curs, lsnrCfgs,
+                    rnd.nextBoolean()));
             else {
-                for (int i = 0; i < NODES - 1; i++) {
-                    ContinuousQuery<QueryTestKey, QueryTestValue> qry = new ContinuousQuery<>();
+                boolean isSync = rnd.nextBoolean();
 
-                    final BlockingQueue<CacheEntryEvent<?, ?>> evtsQueue = new ArrayBlockingQueue<>(50_000);
-
-                    qry.setLocalListener(new CacheEntryUpdatedListener<QueryTestKey, QueryTestValue>() {
-                        @Override public void onUpdated(Iterable<CacheEntryEvent<? extends QueryTestKey,
-                            ? extends QueryTestValue>> evts) throws CacheEntryListenerException {
-                            for (CacheEntryEvent<?, ?> evt : evts)
-                                evtsQueue.add(evt);
-                        }
-                    });
-
-                    qry.setRemoteFilterFactory(new FilterFactory());
-
-                    evtsQueues.add(evtsQueue);
-
-                    QueryCursor<?> cur = ignite(i).cache(ccfg.getName()).query(qry);
-
-                    curs.add(cur);
-                }
+                for (int i = 0; i < NODES - 1; i++)
+                    evtsQueues.add(registerListener(ccfg.getName(), i, curs, lsnrCfgs, isSync));
             }
 
             ConcurrentMap<Object, Object> expData = new ConcurrentHashMap<>();
@@ -673,7 +118,7 @@ public class CacheContinuousQueryFactoryFilterTest extends GridCommonAbstractTes
 
             try {
                 for (int i = 0; i < ITERATION_CNT; i++) {
-                    if (i % 20 == 0)
+                    if (i % 10 == 0)
                         log.info("Iteration: " + i);
 
                     for (int idx = 0; idx < NODES; idx++)
@@ -683,11 +128,68 @@ public class CacheContinuousQueryFactoryFilterTest extends GridCommonAbstractTes
             finally {
                 for (QueryCursor<?> cur : curs)
                     cur.close();
+
+                for (T2<Integer, MutableCacheEntryListenerConfiguration> e : lsnrCfgs)
+                    grid(e.get1()).cache(ccfg.getName()).deregisterCacheEntryListener(e.get2());
             }
         }
         finally {
             ignite(0).destroyCache(ccfg.getName());
         }
+    }
+
+    /**
+     * @param cacheName Cache name.
+     * @param nodeIdx Node index.
+     * @param curs Cursors.
+     * @param lsnrCfgs Listener configurations.
+     * @return Event queue
+     */
+    private BlockingQueue<CacheEntryEvent<?, ?>> registerListener(String cacheName,
+        int nodeIdx,
+        Collection<QueryCursor<?>> curs,
+        Collection<T2<Integer, MutableCacheEntryListenerConfiguration>> lsnrCfgs,
+        boolean sync) {
+        final BlockingQueue<CacheEntryEvent<?, ?>> evtsQueue = new ArrayBlockingQueue<>(50_000);
+
+        if (ThreadLocalRandom.current().nextBoolean()) {
+            MutableCacheEntryListenerConfiguration<QueryTestKey, QueryTestValue> lsnrCfg =
+                new MutableCacheEntryListenerConfiguration<>(
+                    FactoryBuilder.factoryOf(new LocalNonSerialiseListener() {
+                        @Override protected void onEvents(Iterable<CacheEntryEvent<? extends QueryTestKey,
+                            ? extends QueryTestValue>> evts) {
+                            for (CacheEntryEvent<?, ?> evt : evts)
+                                evtsQueue.add(evt);
+                        }
+                    }),
+                    new FilterFactory(),
+                    true,
+                    sync
+                );
+
+            grid(nodeIdx).cache(cacheName).registerCacheEntryListener((CacheEntryListenerConfiguration)lsnrCfg);
+
+            lsnrCfgs.add(new T2<Integer, MutableCacheEntryListenerConfiguration>(nodeIdx, lsnrCfg));
+        }
+        else {
+            ContinuousQuery<QueryTestKey, QueryTestValue> qry = new ContinuousQuery<>();
+
+            qry.setLocalListener(new CacheEntryUpdatedListener<QueryTestKey, QueryTestValue>() {
+                @Override public void onUpdated(Iterable<CacheEntryEvent<? extends QueryTestKey,
+                    ? extends QueryTestValue>> evts) throws CacheEntryListenerException {
+                    for (CacheEntryEvent<?, ?> evt : evts)
+                        evtsQueue.add(evt);
+                }
+            });
+
+            qry.setRemoteFilterFactory(new FilterFactory());
+
+            QueryCursor<?> cur = grid(nodeIdx).cache(cacheName).query(qry);
+
+            curs.add(cur);
+        }
+
+        return evtsQueue;
     }
 
     /**
@@ -927,125 +429,12 @@ public class CacheContinuousQueryFactoryFilterTest extends GridCommonAbstractTes
                     break;
                 }
 
-                case 11: {
-                    SortedMap<Object, Object> vals = new TreeMap<>();
-
-                    while (vals.size() < KEYS / 5)
-                        vals.put(new QueryTestKey(rnd.nextInt(KEYS)), value(rnd));
-
-                    cache.putAll(vals);
-
-                    if (tx != null)
-                        tx.commit();
-
-                    for (Map.Entry<Object, Object> e : vals.entrySet())
-                        updatePartitionCounter(cache, e.getKey(), partCntr);
-
-                    waitAndCheckEvent(evtsQueues, partCntr, affinity(cache), vals, expData);
-
-                    expData.putAll(vals);
-
-                    break;
-                }
-
-                case 12: {
-                    SortedMap<Object, Object> vals = new TreeMap<>();
-
-                    while (vals.size() < KEYS / 5)
-                        vals.put(new QueryTestKey(rnd.nextInt(KEYS)), newVal);
-
-                    cache.invokeAll(vals.keySet(), new EntrySetValueProcessor(newVal, rnd.nextBoolean()));
-
-                    if (tx != null)
-                        tx.commit();
-
-                    for (Map.Entry<Object, Object> e : vals.entrySet())
-                        updatePartitionCounter(cache, e.getKey(), partCntr);
-
-                    waitAndCheckEvent(evtsQueues, partCntr, affinity(cache), vals, expData);
-
-                    for (Object o : vals.keySet())
-                        expData.put(o, newVal);
-
-                    break;
-                }
-
                 default:
                     fail("Op:" + op);
             }
         } finally {
             if (tx != null)
                 tx.close();
-        }
-    }
-
-    /**
-     *  @param evtsQueues Queue.
-     * @param partCntrs Counters.
-     * @param aff Affinity.
-     * @param vals Values.
-     * @param expData Expected data.
-     */
-    private void waitAndCheckEvent(List<BlockingQueue<CacheEntryEvent<?, ?>>> evtsQueues,
-        Map<Integer, Long> partCntrs,
-        Affinity<Object> aff,
-        SortedMap<Object, Object> vals,
-        Map<Object, Object> expData)
-        throws Exception {
-        Map<Object, Object> vals0 = new HashMap<>(vals);
-
-        for (Map.Entry<Object, Object> e : vals0.entrySet()) {
-            if (!isAccepted((QueryTestValue)e.getValue()))
-                vals.remove(e.getKey());
-        }
-
-        for (BlockingQueue<CacheEntryEvent<?, ?>> evtsQueue : evtsQueues) {
-            Map<Object, CacheEntryEvent> rcvEvts = new HashMap<>();
-
-            for (int i = 0; i < vals.size(); i++) {
-                CacheEntryEvent<?, ?> evt = evtsQueue.poll(5, SECONDS);
-
-                try {
-                    assertNotNull(evt);
-                }
-                catch (Throwable e) {
-                    int z = 0;
-
-                    ++z;
-                }
-
-                rcvEvts.put(evt.getKey(), evt);
-            }
-
-            assertEquals(vals.size(), rcvEvts.size());
-
-            for (Map.Entry<Object, Object> e : vals.entrySet()) {
-                Object key = e.getKey();
-                Object val = e.getValue();
-                Object oldVal = expData.get(key);
-
-                if (val == null && oldVal == null) {
-                    checkNoEvent(evtsQueues);
-
-                    continue;
-                }
-
-                CacheEntryEvent evt = rcvEvts.get(key);
-
-                assertNotNull("Failed to wait for event [key=" + key + ", val=" + val + ", oldVal=" + oldVal + ']',
-                    evt);
-                assertEquals(key, evt.getKey());
-                assertEquals(val, evt.getValue());
-                assertEquals(oldVal, evt.getOldValue());
-
-                long cntr = partCntrs.get(aff.partition(key));
-                CacheQueryEntryEvent qryEntryEvt = (CacheQueryEntryEvent)evt.unwrap(CacheQueryEntryEvent.class);
-
-                assertNotNull(cntr);
-                assertNotNull(qryEntryEvt);
-
-                assertEquals(cntr, qryEntryEvt.getPartitionUpdateCounter());
-            }
         }
     }
 
@@ -1153,200 +542,14 @@ public class CacheContinuousQueryFactoryFilterTest extends GridCommonAbstractTes
 
     /**
      *
-     * @param cacheMode Cache mode.
-     * @param backups Number of backups.
-     * @param atomicityMode Cache atomicity mode.
-     * @param memoryMode Cache memory mode.
-     * @param store If {@code true} configures dummy cache store.
-     * @return Cache configuration.
-     */
-    private CacheConfiguration<Object, Object> cacheConfiguration(
-        CacheMode cacheMode,
-        int backups,
-        CacheAtomicityMode atomicityMode,
-        CacheMemoryMode memoryMode,
-        boolean store) {
-        CacheConfiguration<Object, Object> ccfg = new CacheConfiguration<>();
-
-        ccfg.setAtomicityMode(atomicityMode);
-        ccfg.setCacheMode(cacheMode);
-        ccfg.setMemoryMode(memoryMode);
-        ccfg.setWriteSynchronizationMode(FULL_SYNC);
-        ccfg.setAtomicWriteOrderMode(PRIMARY);
-
-        if (cacheMode == PARTITIONED)
-            ccfg.setBackups(backups);
-
-        if (store) {
-            ccfg.setCacheStoreFactory(new TestStoreFactory());
-            ccfg.setReadThrough(true);
-            ccfg.setWriteThrough(true);
-        }
-
-        return ccfg;
-    }
-
-    /**
-     *
-     */
-    private static class TestStoreFactory implements Factory<CacheStore<Object, Object>> {
-        /** {@inheritDoc} */
-        @SuppressWarnings("unchecked")
-        @Override public CacheStore<Object, Object> create() {
-            return new CacheStoreAdapter() {
-                @Override public Object load(Object key) throws CacheLoaderException {
-                    return null;
-                }
-
-                @Override public void write(Cache.Entry entry) throws CacheWriterException {
-                    // No-op.
-                }
-
-                @Override public void delete(Object key) throws CacheWriterException {
-                    // No-op.
-                }
-            };
-        }
-    }
-
-    /**
-     *
-     */
-    static class QueryTestKey implements Serializable, Comparable {
-        /** */
-        private final Integer key;
-
-        /**
-         * @param key Key.
-         */
-        public QueryTestKey(Integer key) {
-            this.key = key;
-        }
-
-        /** {@inheritDoc} */
-        @Override public boolean equals(Object o) {
-            if (this == o)
-                return true;
-
-            if (o == null || getClass() != o.getClass())
-                return false;
-
-            QueryTestKey that = (QueryTestKey)o;
-
-            return key.equals(that.key);
-        }
-
-        /** {@inheritDoc} */
-        @Override public int hashCode() {
-            return key.hashCode();
-        }
-
-        /** {@inheritDoc} */
-        @Override public String toString() {
-            return S.toString(QueryTestKey.class, this);
-        }
-
-        /** {@inheritDoc} */
-        @Override public int compareTo(Object o) {
-            return key - ((QueryTestKey)o).key;
-        }
-    }
-
-    /**
-     *
-     */
-    static class QueryTestValue implements Serializable {
-        /** */
-        private final Integer val1;
-
-        /** */
-        private final String val2;
-
-        /**
-         * @param val Value.
-         */
-        public QueryTestValue(Integer val) {
-            this.val1 = val;
-            this.val2 = String.valueOf(val);
-        }
-
-        /** {@inheritDoc} */
-        @Override public boolean equals(Object o) {
-            if (this == o)
-                return true;
-
-            if (o == null || getClass() != o.getClass())
-                return false;
-
-            QueryTestValue that = (QueryTestValue) o;
-
-            return val1.equals(that.val1) && val2.equals(that.val2);
-        }
-
-        /** {@inheritDoc} */
-        @Override public int hashCode() {
-            int res = val1.hashCode();
-
-            res = 31 * res + val2.hashCode();
-
-            return res;
-        }
-
-        /** {@inheritDoc} */
-        @Override public String toString() {
-            return S.toString(QueryTestValue.class, this);
-        }
-    }
-
-    /**
-     *
-     */
-    protected static class EntrySetValueProcessor implements EntryProcessor<Object, Object, Object> {
-        /** */
-        private Object val;
-
-        /** */
-        private boolean retOld;
-
-        /**
-         * @param val Value to set.
-         * @param retOld Return old value flag.
-         */
-        public EntrySetValueProcessor(Object val, boolean retOld) {
-            this.val = val;
-            this.retOld = retOld;
-        }
-
-        /** {@inheritDoc} */
-        @Override public Object process(MutableEntry<Object, Object> e, Object... args) {
-            Object old = retOld ? e.getValue() : null;
-
-            if (val != null)
-                e.setValue(val);
-            else
-                e.remove();
-
-            return old;
-        }
-
-        /** {@inheritDoc} */
-        @Override public String toString() {
-            return S.toString(EntrySetValueProcessor.class, this);
-        }
-    }
-
-    /**
-     *
-     */
-    protected enum ContinuousDeploy {
-        CLIENT, SERVER, ALL
-    }
-
-    /**
-     *
      */
     protected static class NonSerializableFilter
         implements CacheEntryEventSerializableFilter<QueryTestKey, QueryTestValue>, Externalizable {
+        /** */
+        public NonSerializableFilter() {
+            // No-op.
+        }
+
         /** {@inheritDoc} */
         @Override public boolean evaluate(CacheEntryEvent<? extends QueryTestKey, ? extends QueryTestValue> event)
             throws CacheEntryListenerException {
@@ -1367,7 +570,7 @@ public class CacheContinuousQueryFactoryFilterTest extends GridCommonAbstractTes
          * @return {@code True} if value is even.
          */
         public static boolean isAccepted(QueryTestValue val) {
-            return val == null ? true : val.val1 % 2 == 0;
+            return val == null || val.val1 % 2 == 0;
         }
     }
 
@@ -1377,6 +580,61 @@ public class CacheContinuousQueryFactoryFilterTest extends GridCommonAbstractTes
     protected static class FilterFactory implements Factory<NonSerializableFilter> {
         @Override public NonSerializableFilter create() {
             return new NonSerializableFilter();
+        }
+    }
+
+    /**
+     *
+     */
+    public abstract class LocalNonSerialiseListener implements
+        CacheEntryUpdatedListener<QueryTestKey, QueryTestValue>,
+        CacheEntryCreatedListener<QueryTestKey, QueryTestValue>,
+        CacheEntryExpiredListener<QueryTestKey, QueryTestValue>,
+        CacheEntryRemovedListener<QueryTestKey, QueryTestValue>,
+        Externalizable {
+        /** */
+        public LocalNonSerialiseListener() {
+            // No-op.
+        }
+
+        /** {@inheritDoc} */
+        @Override public void onCreated(Iterable<CacheEntryEvent<? extends QueryTestKey,
+            ? extends QueryTestValue>> evts) throws CacheEntryListenerException {
+            onEvents(evts);
+        }
+
+        /** {@inheritDoc} */
+        @Override public void onExpired(Iterable<CacheEntryEvent<? extends QueryTestKey,
+            ? extends QueryTestValue>> evts) throws CacheEntryListenerException {
+            onEvents(evts);
+        }
+
+        /** {@inheritDoc} */
+        @Override public void onRemoved(Iterable<CacheEntryEvent<? extends QueryTestKey,
+            ? extends QueryTestValue>> evts) throws CacheEntryListenerException {
+            onEvents(evts);
+        }
+
+        /** {@inheritDoc} */
+        @Override public void onUpdated(Iterable<CacheEntryEvent<? extends QueryTestKey,
+            ? extends QueryTestValue>> evts) throws CacheEntryListenerException {
+            onEvents(evts);
+        }
+
+        /**
+         * @param evts Events.
+         */
+        protected abstract void onEvents(Iterable<CacheEntryEvent<? extends QueryTestKey,
+            ? extends QueryTestValue>> evts);
+
+        /** {@inheritDoc} */
+        @Override public void writeExternal(ObjectOutput out) throws IOException {
+            throw new UnsupportedOperationException("Failed. Listener should not be marshaled.");
+        }
+
+        /** {@inheritDoc} */
+        @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+            throw new UnsupportedOperationException("Failed. Listener should not be unmarshaled.");
         }
     }
 }

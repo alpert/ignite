@@ -576,7 +576,7 @@ public class CacheContinuousQueryRandomOperationsTest extends GridCommonAbstract
      * @param deploy The place where continuous query will be started.
      * @throws Exception If failed.
      */
-    private void testContinuousQuery(CacheConfiguration<Object, Object> ccfg, ContinuousDeploy deploy)
+    protected void testContinuousQuery(CacheConfiguration<Object, Object> ccfg, ContinuousDeploy deploy)
         throws Exception {
         ignite(0).createCache(ccfg);
 
@@ -1176,7 +1176,7 @@ public class CacheContinuousQueryRandomOperationsTest extends GridCommonAbstract
     /**
      *
      */
-    static class QueryTestKey implements Serializable, Comparable {
+    public static class QueryTestKey implements Serializable, Comparable {
         /** */
         private final Integer key;
 
@@ -1219,12 +1219,12 @@ public class CacheContinuousQueryRandomOperationsTest extends GridCommonAbstract
     /**
      *
      */
-    static class QueryTestValue implements Serializable {
+    public static class QueryTestValue implements Serializable {
         /** */
-        private final Integer val1;
+        protected final Integer val1;
 
         /** */
-        private final String val2;
+        protected final String val2;
 
         /**
          * @param val Value.

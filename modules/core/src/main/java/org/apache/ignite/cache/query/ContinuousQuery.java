@@ -19,6 +19,7 @@ package org.apache.ignite.cache.query;
 
 import javax.cache.Cache;
 import javax.cache.configuration.Factory;
+import javax.cache.event.CacheEntryEventFilter;
 import javax.cache.event.CacheEntryUpdatedListener;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheEntryEventSerializableFilter;
@@ -121,7 +122,7 @@ public final class ContinuousQuery<K, V> extends Query<Cache.Entry<K, V>> {
     private CacheEntryEventSerializableFilter<K, V> rmtFilter;
 
     /** Remote filter factory. */
-    private Factory<? extends CacheEntryEventSerializableFilter<K, V>> rmtFilterFactory;
+    private Factory<? extends CacheEntryEventFilter<K, V>> rmtFilterFactory;
 
     /** Time interval. */
     private long timeInterval = DFLT_TIME_INTERVAL;
@@ -200,7 +201,10 @@ public final class ContinuousQuery<K, V> extends Query<Cache.Entry<K, V>> {
      *
      * @param rmtFilter Key-value filter.
      * @return {@code this} for chaining.
+     *
+     * @deprecated Use {@link #setRemoteFilterFactory(Factory)} instead.
      */
+    @Deprecated
     public ContinuousQuery<K, V> setRemoteFilter(CacheEntryEventSerializableFilter<K, V> rmtFilter) {
         this.rmtFilter = rmtFilter;
 
@@ -228,7 +232,7 @@ public final class ContinuousQuery<K, V> extends Query<Cache.Entry<K, V>> {
      * @return {@code this} for chaining.
      */
     public ContinuousQuery<K, V> setRemoteFilterFactory(
-        Factory<? extends CacheEntryEventSerializableFilter<K, V>> rmtFilterFactory) {
+        Factory<? extends CacheEntryEventFilter<K, V>> rmtFilterFactory) {
         this.rmtFilterFactory = rmtFilterFactory;
 
         return this;
@@ -239,7 +243,7 @@ public final class ContinuousQuery<K, V> extends Query<Cache.Entry<K, V>> {
      *
      * @return Remote filter.
      */
-    public Factory<? extends CacheEntryEventSerializableFilter<K, V>> getRemoteFilterFactory() {
+    public Factory<? extends CacheEntryEventFilter<K, V>> getRemoteFilterFactory() {
         return rmtFilterFactory;
     }
 

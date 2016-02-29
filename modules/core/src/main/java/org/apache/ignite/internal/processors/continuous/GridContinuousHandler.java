@@ -21,6 +21,7 @@ import java.io.Externalizable;
 import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
+import javax.cache.event.CacheEntryEventFilter;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
@@ -158,4 +159,9 @@ public interface GridContinuousHandler extends Externalizable, Cloneable {
      * @param topVer Topology version.
      */
     public void updateCounters(AffinityTopologyVersion topVer, Map<Integer, Long> cntrs);
+
+    /**
+     * @return Cache entry filter.
+     */
+    public CacheEntryEventFilter getEventFilter();
 }

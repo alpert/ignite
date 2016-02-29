@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -263,7 +262,7 @@ public class CacheContinuousQueryHandler<K, V> implements GridContinuousHandler 
         if (locLsnr != null)
             ctx.resource().injectGeneric(locLsnr);
 
-        final CacheEntryEventFilter filter = getRemoteFilter();
+        final CacheEntryEventFilter filter = getEventFilter();
 
         if (filter != null)
             ctx.resource().injectGeneric(filter);
@@ -521,10 +520,8 @@ public class CacheContinuousQueryHandler<K, V> implements GridContinuousHandler 
         return mgr.registerListener(routineId, lsnr, internal);
     }
 
-    /**
-     * @return Remote filter.
-     */
-    protected CacheEntryEventFilter<K, V> getRemoteFilter() {
+    /** {@inheritDoc} */
+    public CacheEntryEventFilter getEventFilter() {
         return rmtFilter;
     }
 

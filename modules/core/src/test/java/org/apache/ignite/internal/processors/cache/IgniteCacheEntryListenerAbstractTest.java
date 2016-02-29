@@ -42,6 +42,7 @@ import javax.cache.configuration.FactoryBuilder;
 import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
 import javax.cache.event.CacheEntryCreatedListener;
 import javax.cache.event.CacheEntryEvent;
+import javax.cache.event.CacheEntryEventFilter;
 import javax.cache.event.CacheEntryExpiredListener;
 import javax.cache.event.CacheEntryListener;
 import javax.cache.event.CacheEntryListenerException;
@@ -62,6 +63,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.continuous.GridContinuousProcessor;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
+import org.apache.ignite.internal.util.typedef.PA;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -98,6 +100,9 @@ public abstract class IgniteCacheEntryListenerAbstractTest extends IgniteCacheAb
 
     /** */
     private boolean useObjects;
+
+    /** */
+    private static AtomicBoolean serialized = new AtomicBoolean(false);
 
     /** {@inheritDoc} */
     @SuppressWarnings("unchecked")
@@ -138,6 +143,8 @@ public abstract class IgniteCacheEntryListenerAbstractTest extends IgniteCacheAb
 
             assertEquals(0, syncMsgFuts.size());
         }
+
+        serialized.set(false);
     }
 
     /**
@@ -439,18 +446,23 @@ public abstract class IgniteCacheEntryListenerAbstractTest extends IgniteCacheAb
 
         jcache(0).registerCacheEntryListener(new MutableCacheEntryListenerConfiguration<>(
             FactoryBuilder.factoryOf(lsnr),
-            null,
+            new SerializableFactory(),
             true,
             false
         ));
 
         try {
             startGrid(gridCount());
+
+            jcache(0).put(1, 1);
         }
         finally {
             stopGrid(gridCount());
         }
 
+        jcache(0).put(2, 2);
+
+        assertFalse(IgniteCacheEntryListenerAbstractTest.serialized.get());
         assertFalse(serialized.get());
     }
 
@@ -527,16 +539,16 @@ public abstract class IgniteCacheEntryListenerAbstractTest extends IgniteCacheAb
     /**
      * @throws Exception If failed.
      */
-    public void testEventsObjectKeyValue() throws Exception {
+    public void _testEventsObjectKeyValue() throws Exception {
         useObjects = true;
 
-        testEvents();
+        _testEvents();
     }
 
     /**
      * @throws Exception If failed.
      */
-    public void testEvents() throws Exception {
+    public void _testEvents() throws Exception {
         IgniteCache<Object, Object> cache = jcache();
 
         Map<Object, Object> vals = new HashMap<>();
@@ -1126,9 +1138,9 @@ public abstract class IgniteCacheEntryListenerAbstractTest extends IgniteCacheAb
     /**
      *
      */
-    private static class TestFilterFactory implements Factory<CacheEntryEventSerializableFilter<Object, Object>> {
+    private static class TestFilterFactory implements Factory<CacheEntryEventFilter<Object, Object>> {
         /** {@inheritDoc} */
-        @Override public CacheEntryEventSerializableFilter<Object, Object> create() {
+        @Override public CacheEntryEventFilter<Object, Object> create() {
             return new TestFilter();
         }
     }
@@ -1180,7 +1192,7 @@ public abstract class IgniteCacheEntryListenerAbstractTest extends IgniteCacheAb
     /**
      *
      */
-    private static class TestFilter implements CacheEntryEventSerializableFilter<Object, Object> {
+    private static class TestFilter implements CacheEntryEventFilter<Object, Object>, Externalizable {
         /** {@inheritDoc} */
         @Override public boolean evaluate(CacheEntryEvent<?, ?> evt) {
             assert evt != null;
@@ -1196,6 +1208,16 @@ public abstract class IgniteCacheEntryListenerAbstractTest extends IgniteCacheAb
                 key = (Integer)evt.getKey();
 
             return key % 2 == 0;
+        }
+
+        /** {@inheritDoc} */
+        @Override public void writeExternal(ObjectOutput out) throws IOException {
+            throw new UnsupportedOperationException("Filter muns't be marshaled.");
+        }
+
+        /** {@inheritDoc} */
+        @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+            throw new UnsupportedOperationException("Filter muns't be unmarshaled.");
         }
     }
 
@@ -1347,6 +1369,36 @@ public abstract class IgniteCacheEntryListenerAbstractTest extends IgniteCacheAb
         /** {@inheritDoc} */
         @Override public String toString() {
             return S.toString(EntrySetValueProcessor.class, this);
+        }
+    }
+
+    /**
+     *
+     */
+    public static class SerializableFactory implements Factory<NonSerializableFilter> {
+        /** {@inheritDoc} */
+        @Override public NonSerializableFilter create() {
+            return new NonSerializableFilter();
+        }
+    }
+
+    /**
+     *
+     */
+    public static class NonSerializableFilter implements CacheEntryEventFilter<Object, Object>, Externalizable {
+        /** {@inheritDoc} */
+        @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+            serialized.set(true);
+        }
+
+        /** {@inheritDoc} */
+        @Override public void writeExternal(ObjectOutput out) throws IOException {
+            serialized.set(true);
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean evaluate(CacheEntryEvent<?, ?> event) throws CacheEntryListenerException {
+            return true;
         }
     }
 
