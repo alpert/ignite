@@ -112,8 +112,11 @@ public class CacheContinuousQueryHandlerV2<K, V> extends CacheContinuousQueryHan
 
         this.rmtFilterFactory = rmtFilterFactory;
 
-        if (types != null)
+        if (types != null) {
+            assert types != 0;
+
             this.types = types;
+        }
     }
 
     /** {@inheritDoc} */
@@ -121,10 +124,12 @@ public class CacheContinuousQueryHandlerV2<K, V> extends CacheContinuousQueryHan
         if (filter == null) {
             assert rmtFilterFactory != null;
 
-            if (types != 0)
-                rmtFilterFactory = new JCacheRemoteQueryFactory(rmtFilterFactory, types);
+            Factory<? extends CacheEntryEventFilter> factory = rmtFilterFactory;
 
-            filter = rmtFilterFactory.create();
+            if (types != 0)
+                factory = new JCacheRemoteQueryFactory(rmtFilterFactory, types);
+
+            filter = factory.create();
         }
 
         return filter;

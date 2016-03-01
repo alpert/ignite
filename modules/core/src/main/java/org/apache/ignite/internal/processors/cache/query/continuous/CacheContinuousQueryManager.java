@@ -776,7 +776,7 @@ public class CacheContinuousQueryManager extends GridCacheManagerAdapter {
                 cctx.isLocal(),
                 keepBinary,
                 ignoreClassNotFound,
-                (byte)0);
+                null);
         else {
             CacheEntryEventFilter fltr = null;
 
