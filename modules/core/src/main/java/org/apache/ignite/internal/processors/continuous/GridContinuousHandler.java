@@ -21,7 +21,6 @@ import java.io.Externalizable;
 import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
-import javax.cache.event.CacheEntryEventFilter;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
