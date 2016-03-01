@@ -66,15 +66,9 @@ public class CacheContinuousQueryHandlerV2<K, V> extends CacheContinuousQueryHan
      * @param topic Topic for ordered messages.
      * @param locLsnr Local listener.
      * @param rmtFilterFactory Remote filter factory.
-     * @param internal Internal flag.
-     * @param notifyExisting Notify existing flag.
      * @param oldValRequired Old value required flag.
      * @param sync Synchronous flag.
      * @param ignoreExpired Ignore expired events flag.
-     * @param skipPrimaryCheck Whether to skip primary check for REPLICATED cache.
-     * @param taskHash Task name hash code.
-     * @param locCache {@code True} if local cache.
-     * @param keepBinary Keep binary flag.
      * @param types Event types.
      */
     public CacheContinuousQueryHandlerV2(
@@ -82,30 +76,18 @@ public class CacheContinuousQueryHandlerV2<K, V> extends CacheContinuousQueryHan
         Object topic,
         CacheEntryUpdatedListener<K, V> locLsnr,
         Factory<? extends CacheEntryEventFilter<K, V>> rmtFilterFactory,
-        boolean internal,
-        boolean notifyExisting,
         boolean oldValRequired,
         boolean sync,
         boolean ignoreExpired,
-        int taskHash,
-        boolean skipPrimaryCheck,
-        boolean locCache,
-        boolean keepBinary,
         boolean ignoreClsNotFound,
         @Nullable Byte types) {
         super(cacheName,
             topic,
             locLsnr,
             null,
-            internal,
-            notifyExisting,
             oldValRequired,
             sync,
             ignoreExpired,
-            taskHash,
-            skipPrimaryCheck,
-            locCache,
-            keepBinary,
             ignoreClsNotFound);
 
         assert rmtFilterFactory != null;
@@ -126,10 +108,10 @@ public class CacheContinuousQueryHandlerV2<K, V> extends CacheContinuousQueryHan
 
             Factory<? extends CacheEntryEventFilter> factory = rmtFilterFactory;
 
-            if (types != 0)
-                factory = new JCacheRemoteQueryFactory(rmtFilterFactory, types);
-
             filter = factory.create();
+
+            if (types != 0)
+                filter = new JCacheQueryRemoteFilter(filter, types);
         }
 
         return filter;
@@ -190,33 +172,5 @@ public class CacheContinuousQueryHandlerV2<K, V> extends CacheContinuousQueryHan
             rmtFilterFactory = (Factory)in.readObject();
 
         types = in.readByte();
-    }
-
-    /**
-     *
-     */
-    private static class JCacheRemoteQueryFactory implements Factory<CacheEntryEventFilter> {
-        /** */
-        private static final long serialVersionUID = 0L;
-
-        /** Factory. */
-        protected Factory<? extends CacheEntryEventFilter> impl;
-
-        /** */
-        private byte types;
-
-        /**
-         * @param impl Factory.
-         * @param types Types.
-         */
-        public JCacheRemoteQueryFactory(@Nullable Factory<? extends CacheEntryEventFilter> impl, byte types) {
-            this.impl = impl;
-            this.types = types;
-        }
-
-        /** {@inheritDoc} */
-        @Override public JCacheQueryRemoteFilter create() {
-            return new JCacheQueryRemoteFilter(impl != null ? impl.create() : null, types);
-        }
     }
 }

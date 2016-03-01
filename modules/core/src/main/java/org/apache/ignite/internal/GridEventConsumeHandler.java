@@ -26,7 +26,6 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
 import java.util.UUID;
-import javax.cache.event.CacheEntryEventFilter;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.CacheEvent;
@@ -139,11 +138,6 @@ class GridEventConsumeHandler implements GridContinuousHandler {
     /** {@inheritDoc} */
     @Override public void updateCounters(AffinityTopologyVersion topVer, Map<Integer, Long> cntrs) {
         // No-op.
-    }
-
-    /** {@inheritDoc} */
-    @Override public CacheEntryEventFilter getEventFilter() {
-        return null;
     }
 
     /** {@inheritDoc} */

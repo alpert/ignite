@@ -1175,7 +1175,7 @@ public class CacheContinuousQueryRandomOperationsTest extends GridCommonAbstract
      * @param store If {@code true} configures dummy cache store.
      * @return Cache configuration.
      */
-    private CacheConfiguration<Object, Object> cacheConfiguration(
+    protected CacheConfiguration<Object, Object> cacheConfiguration(
         CacheMode cacheMode,
         int backups,
         CacheAtomicityMode atomicityMode,

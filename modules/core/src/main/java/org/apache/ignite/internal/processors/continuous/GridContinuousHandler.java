@@ -159,9 +159,4 @@ public interface GridContinuousHandler extends Externalizable, Cloneable {
      * @param topVer Topology version.
      */
     public void updateCounters(AffinityTopologyVersion topVer, Map<Integer, Long> cntrs);
-
-    /**
-     * @return Cache entry filter.
-     */
-    public CacheEntryEventFilter getEventFilter();
 }

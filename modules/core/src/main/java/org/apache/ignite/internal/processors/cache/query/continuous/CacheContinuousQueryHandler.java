@@ -168,30 +168,18 @@ public class CacheContinuousQueryHandler<K, V> implements GridContinuousHandler 
      * @param topic Topic for ordered messages.
      * @param locLsnr Local listener.
      * @param rmtFilter Remote filter.
-     * @param internal Internal flag.
-     * @param notifyExisting Notify existing flag.
      * @param oldValRequired Old value required flag.
      * @param sync Synchronous flag.
      * @param ignoreExpired Ignore expired events flag.
-     * @param skipPrimaryCheck Whether to skip primary check for REPLICATED cache.
-     * @param taskHash Task name hash code.
-     * @param locCache {@code True} if local cache.
-     * @param keepBinary Keep binary flag.
      */
     public CacheContinuousQueryHandler(
         String cacheName,
         Object topic,
         CacheEntryUpdatedListener<K, V> locLsnr,
         CacheEntryEventSerializableFilter<K, V> rmtFilter,
-        boolean internal,
-        boolean notifyExisting,
         boolean oldValRequired,
         boolean sync,
         boolean ignoreExpired,
-        int taskHash,
-        boolean skipPrimaryCheck,
-        boolean locCache,
-        boolean keepBinary,
         boolean ignoreClsNotFound) {
         assert topic != null;
         assert locLsnr != null;
@@ -200,18 +188,47 @@ public class CacheContinuousQueryHandler<K, V> implements GridContinuousHandler 
         this.topic = topic;
         this.locLsnr = locLsnr;
         this.rmtFilter = rmtFilter;
-        this.internal = internal;
-        this.notifyExisting = notifyExisting;
         this.oldValRequired = oldValRequired;
         this.sync = sync;
         this.ignoreExpired = ignoreExpired;
-        this.taskHash = taskHash;
-        this.skipPrimaryCheck = skipPrimaryCheck;
-        this.locCache = locCache;
-        this.keepBinary = keepBinary;
         this.ignoreClsNotFound = ignoreClsNotFound;
 
         cacheId = CU.cacheId(cacheName);
+    }
+
+    /**
+     * @param internal Internal query.
+     */
+    public void internal(boolean internal) {
+        this.internal = internal;
+    }
+
+    /**
+     * @param notifyExisting Notify existing.
+     */
+    public void notifyExisting(boolean notifyExisting) {
+        this.notifyExisting = notifyExisting;
+    }
+
+    /**
+     * @param locCache Local cache.
+     */
+    public void localCache(boolean locCache) {
+        this.locCache = locCache;
+    }
+
+    /**
+     * @param taskHash Task hash.
+     */
+    public void taskNameHash(int taskHash) {
+        this.taskHash = taskHash;
+    }
+
+    /**
+     * @param skipPrimaryCheck Whether to skip primary check for REPLICATED cache.
+     */
+    public void skipPrimaryCheck(boolean skipPrimaryCheck) {
+        this.skipPrimaryCheck = skipPrimaryCheck;
     }
 
     /** {@inheritDoc} */
@@ -520,7 +537,9 @@ public class CacheContinuousQueryHandler<K, V> implements GridContinuousHandler 
         return mgr.registerListener(routineId, lsnr, internal);
     }
 
-    /** {@inheritDoc} */
+    /**
+     * @return Cache entry event filter.
+     */
     public CacheEntryEventFilter getEventFilter() {
         return rmtFilter;
     }
