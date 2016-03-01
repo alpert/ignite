@@ -63,7 +63,6 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.continuous.GridContinuousProcessor;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
-import org.apache.ignite.internal.util.typedef.PA;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -1212,12 +1211,12 @@ public abstract class IgniteCacheEntryListenerAbstractTest extends IgniteCacheAb
 
         /** {@inheritDoc} */
         @Override public void writeExternal(ObjectOutput out) throws IOException {
-            throw new UnsupportedOperationException("Filter muns't be marshaled.");
+            throw new UnsupportedOperationException("Filter must not be marshaled.");
         }
 
         /** {@inheritDoc} */
         @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-            throw new UnsupportedOperationException("Filter muns't be unmarshaled.");
+            throw new UnsupportedOperationException("Filter must not be unmarshaled.");
         }
     }
 

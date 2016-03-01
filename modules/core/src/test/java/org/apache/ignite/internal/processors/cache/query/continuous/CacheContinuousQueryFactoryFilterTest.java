@@ -49,8 +49,6 @@ import org.apache.ignite.cache.query.CacheQueryEntryEvent;
 import org.apache.ignite.cache.query.ContinuousQuery;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryRandomOperationsTest.QueryTestKey;
-import org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryRandomOperationsTest.QueryTestValue;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;

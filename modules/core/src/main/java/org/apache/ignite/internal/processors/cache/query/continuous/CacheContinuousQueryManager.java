@@ -618,7 +618,6 @@ public class CacheContinuousQueryManager extends GridCacheManagerAdapter {
             hnd);
     }
 
-
     /**
      * @param locLsnr Local listener.
      * @param types JCache event types.

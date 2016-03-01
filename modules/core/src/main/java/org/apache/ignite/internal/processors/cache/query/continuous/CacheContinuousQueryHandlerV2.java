@@ -47,7 +47,7 @@ public class CacheContinuousQueryHandlerV2<K, V> extends CacheContinuousQueryHan
     private DeployableObject rmtFilterFactoryDep;
 
     /** Event types for JCache API. */
-    private byte types = 0;
+    private byte types;
 
     /** */
     protected transient CacheEntryEventFilter filter;
