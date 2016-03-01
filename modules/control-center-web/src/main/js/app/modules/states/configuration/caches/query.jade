@@ -89,6 +89,19 @@ form.panel.panel-default(name='query' novalidate)
                             data-min='1'
                         )
                 .settings-row
+                    ignite-form-field
+                        ignite-form-field-label
+                            | Long query timeout:
+                        ignite-form-field-tooltip
+                            | Timeout in milliseconds after which long query warning will be printed
+                        ignite-form-field-input-number(
+                            data-id='longQueryWarningTimeout'
+                            data-name='longQueryWarningTimeout'
+                            data-ng-model='#{model}.longQueryWarningTimeout'
+                            data-placeholder='3000'
+                            data-min='0'
+                        )
+                .settings-row
                     ignite-form-group(ng-model='#{sqlFunctionClasses}' ng-form='#{form}')
                         ignite-form-field-label
                             | SQL functions
@@ -129,19 +142,6 @@ form.panel.panel-default(name='query' novalidate)
                                     +sqlFxFeedbackUnique(field)
                         .group-content-empty(ng-if='!(#{sqlFunctionClasses}.length) && !group.add.length')
                             | Not defined
-                .settings-row
-                    ignite-form-field
-                        ignite-form-field-label
-                            | Long query timeout:
-                        ignite-form-field-tooltip
-                            | Timeout in milliseconds after which long query warning will be printed
-                        ignite-form-field-input-number(
-                            data-id='longQueryWarningTimeout'
-                            data-name='longQueryWarningTimeout'
-                            data-ng-model='#{model}.longQueryWarningTimeout'
-                            data-placeholder='3000'
-                            data-min='0'
-                        )
                 .settings-row
                     ignite-form-field.checkbox
                         ignite-form-field-input-checkbox(

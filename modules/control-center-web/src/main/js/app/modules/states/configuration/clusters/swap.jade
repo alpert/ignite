@@ -50,7 +50,7 @@ form.panel.panel-default(name='swapSpaceSpi' novalidate)
                     ) {{ #{model}.expanded ? "Hide settings" : "Show settings"}}
 
                 .settings-row
-                    .col-sm-12.panel-details(ng-if='#{model}.expanded && #{model}.kind')
+                    .panel-details.col-sm-12(ng-if='#{model}.expanded && #{model}.kind')
                         .details-row
                             ignite-form-field
                                 ignite-form-field-label

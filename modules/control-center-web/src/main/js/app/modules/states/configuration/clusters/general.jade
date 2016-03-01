@@ -86,7 +86,7 @@ form.panel.panel-default(name='general' novalidate)
                             data-placeholder='Choose marshaller'
                         )
                 .settings-row
-                    .col-sm-12.panel-details
+                    .panel-details.col-sm-12
                         ignite-configuration-clusters-general-discovery-cloud(
                             ng-if='#{model}.discovery.kind === "Cloud"')
                         ignite-configuration-clusters-general-discovery-google(

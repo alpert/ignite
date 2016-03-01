@@ -15,6 +15,7 @@
     limitations under the License.
 
 - var model = 'backupItem'
+- var form = 'writeBehind'
 
 form.panel.panel-default(name='store' novalidate)
     .panel-heading(bs-collapse-toggle)
@@ -27,6 +28,23 @@ form.panel.panel-default(name='store' novalidate)
         .panel-body
             .col-sm-6
                 .settings-row
+                    ignite-form-field
+                        ignite-form-field-label
+                            | Store factory:
+                        ignite-form-field-tooltip
+                            | Factory for persistent storage for cache data
+                        ignite-form-field-dropdown(
+                            data-id='cacheStoreFactory'
+                            data-name='cacheStoreFactory'
+                            data-options='[\
+                                {value: "CacheJdbcPojoStoreFactory", label: "JDBC POJO store factory"},\
+                                {value: "CacheJdbcBlobStoreFactory", label: "JDBC BLOB store factory"},\
+                                {value: "CacheHibernateBlobStoreFactory", label: "Hibernate BLOB store factory"},\
+                                {value: undefined, label: "Not set"}\
+                            ]'
+                            data-ng-model='#{model}.cacheStoreFactory.kind'
+                        )
+                .settings-row
                     ignite-form-field.checkbox
                         ignite-form-field-input-checkbox(
                             data-id='storeKeepBinary'
@@ -37,11 +55,119 @@ form.panel.panel-default(name='store' novalidate)
                         ignite-form-field-tooltip
                             | Flag indicating that CacheStore implementation is working with binary objects instead of Java objects
                 .settings-row
-
+                    ignite-form-field.checkbox
+                        ignite-form-field-input-checkbox(
+                            data-id='loadPreviousValue'
+                            data-name='loadPreviousValue'
+                            data-ng-model='#{model}.loadPreviousValue'
+                        )
+                        | Load previous value
+                        ignite-form-field-tooltip
+                            | Flag indicating whether value should be loaded from store if it is not in the cache for following cache operations:",
+                            ul: li IgniteCache.putIfAbsent()
+                                li IgniteCache.replace()
+                                li IgniteCache.replace()
+                                li IgniteCache.remove()
+                                li IgniteCache.getAndPut()
+                                li IgniteCache.getAndRemove()
+                                li IgniteCache.getAndReplace()
+                                li IgniteCache.getAndPutIfAbsent()
                 .settings-row
-
+                    ignite-form-field.checkbox
+                        ignite-form-field-input-checkbox(
+                            data-id='readThrough'
+                            data-name='readThrough'
+                            data-ng-model='#{model}.readThrough'
+                        )
+                        | Read-through
+                        ignite-form-field-tooltip
+                            | Flag indicating whether read-through caching should be used
                 .settings-row
-
+                    ignite-form-field.checkbox
+                        ignite-form-field-input-checkbox(
+                            data-id='writeThrough'
+                            data-name='writeThrough'
+                            data-ng-model='#{model}.writeThrough'
+                        )
+                        | Write-through
+                        ignite-form-field-tooltip
+                            | Flag indicating whether write-through caching should be used
+                .settings-row
+                    ignite-form-group(ng-model='#{model}' ng-form='#{form}')
+                        ignite-form-field-label
+                            | Write behind
+                        ignite-form-group-tooltip
+                            | Cache write behind settings#[br]
+                            | Write-behind is a special mode when updates to cache accumulated and then asynchronously flushed to persistent store as a bulk operation
+                        .group-content
+                            .details-row
+                                ignite-form-field.checkbox
+                                    ignite-form-field-input-checkbox(
+                                        data-id='writeBehindEnabled'
+                                        data-name='writeBehindEnabled'
+                                        data-ng-model='#{model}.writeBehindEnabled'
+                                    )
+                                    | Enabled
+                                    ignite-form-field-tooltip
+                                        | Flag indicating whether Ignite should use write-behind behaviour for the cache store
+                            .details-row
+                                ignite-form-field
+                                    ignite-form-field-label
+                                        | Batch size:
+                                    ignite-form-field-tooltip
+                                        | Maximum batch size for write-behind cache store operations#[br]
+                                        | Store operations (get or remove) are combined in a batch of this size to be passed to cache store
+                                    ignite-form-field-input-number(
+                                        data-id='writeBehindBatchSize'
+                                        data-name='writeBehindBatchSize'
+                                        data-ng-model='#{model}.writeBehindBatchSize'
+                                        data-ng-disabled='!#{model}.writeBehindEnabled'
+                                        data-placeholder='512'
+                                        data-min='1'
+                                    )
+                            .details-row
+                                ignite-form-field
+                                    ignite-form-field-label
+                                        | Flush size:
+                                    ignite-form-field-tooltip
+                                        | Maximum size of the write-behind cache#[br]
+                                        | If cache size exceeds this value, all cached items are flushed to the cache store and write cache is cleared
+                                    ignite-form-field-input-number(
+                                        data-id='writeBehindFlushSize'
+                                        data-name='writeBehindFlushSize'
+                                        data-ng-model='#{model}.writeBehindFlushSize'
+                                        data-ng-disabled='!#{model}.writeBehindEnabled'
+                                        data-placeholder='10240'
+                                        data-min='1'
+                                    )
+                            .details-row
+                                ignite-form-field
+                                    ignite-form-field-label
+                                        | Flush frequency:
+                                    ignite-form-field-tooltip
+                                        | Frequency with which write-behind cache is flushed to the cache store in milliseconds
+                                    ignite-form-field-input-number(
+                                        data-id='writeBehindFlushFrequency'
+                                        data-name='writeBehindFlushFrequency'
+                                        data-ng-model='#{model}.writeBehindFlushFrequency'
+                                        data-ng-disabled='!#{model}.writeBehindEnabled'
+                                        data-placeholder='5000'
+                                        data-min='1'
+                                    )
+                            .details-row
+                                ignite-form-field
+                                    ignite-form-field-label
+                                        | Flush threads count:
+                                    ignite-form-field-tooltip
+                                        | Number of threads that will perform cache flushing
+                                    ignite-form-field-input-number(
+                                        data-id='writeBehindFlushThreadCount'
+                                        data-name='writeBehindFlushThreadCount'
+                                        data-ng-model='#{model}.writeBehindFlushThreadCount'
+                                        data-ng-disabled='!#{model}.writeBehindEnabled'
+                                        data-placeholder='1'
+                                        data-min='1'
+                                    )
             ignite-ui-ace.col-sm-6
                 .preview-panel(ng-init='mode = false')
                     .preview-legend

@@ -29,68 +29,85 @@ form.panel.panel-default(name='server-near-cache' novalidate)
         .panel-body
             .col-sm-6
                 .settings-row
+                    ignite-form-field.checkbox
+                        ignite-form-field-input-checkbox(
+                            data-id='swapEnabled'
+                            data-name='swapEnabled'
+                            data-ng-model='#{model}.swapEnabled'
+                        )
+                        | Swap enabled
+                        ignite-form-field-tooltip
+                            | Flag indicating whether swap storage is enabled or not for this cache
+                .settings-row(data-ng-show='#{model}.memoryMode !== "OFFHEAP_VALUES"')
                     ignite-form-field
                         ignite-form-field-label
-                            | Name:
+                            | Start size:
                         ignite-form-field-tooltip
-                            | Cache name
-                        ignite-form-field-input-text(
-                            data-id='cacheName'
-                            data-name='cacheName'
-                            data-ng-model='#{model}.name'
-                            data-ng-required='true'
-                            data-placeholder='Input name'
+                            | Initial cache size for near cache which will be used to pre-create internal hash table after start
+                        ignite-form-field-input-number(
+                            data-id='nearStartSize'
+                            data-name='nearStartSize'
+                            data-ng-model='#{model}.nearConfiguration.nearStartSize'
+                            data-ng-disabled='!#{model}.nearCacheEnabled'
+                            data-placeholder='375000'
+                            data-min='-1'
                         )
                 .settings-row
+                    -var evictionPolicy = model + '.nearConfiguration.nearEvictionPolicy'
+                    -var evictionPolicyKind = evictionPolicy + '.kind'
+
                     ignite-form-field
                         ignite-form-field-label
-                            | Clusters: #[a(ui-sref='base.configuration.clusters({id: #{model}._id})') (add)]
+                            | Eviction policy:
                         ignite-form-field-tooltip
-                            | Associate clusters with the current cache
+                            | Optional cache eviction policy#[br]
+                            | Must be set for entries to be evicted from on-heap to off-heap or swap
                         ignite-form-field-dropdown(
-                            data-id='clusters'
-                            data-name='clusters'
-                            data-options='clusters'
-                            data-multiple='true'
-                            data-ng-model='#{model}.clusters'
-                            data-ng-disabled='!clusters.length'
-                            data-placeholder='{{ clusters.length ? "Choose clusters": "No clusters configured" }}'
+                            data-id='nearCacheEvictionPolicyKind'
+                            data-name='nearCacheEvictionPolicyKind'
+                            data-options='[\
+                                {value: "LRU", label: "LRU"},\
+                                {value: "FIFO", label: "FIFO"},\
+                                {value: "SORTED", label: "Sorted"},\
+                                {value: undefined, label: "Not set"}\
+                            ]'
+                            data-ng-model='#{evictionPolicyKind}'
+                            data-ng-disabled='!#{model}.nearCacheEnabled'
                         )
-                .settings-row
-                    ignite-form-field
-                        ignite-form-field-label
-                            | Domain models: #[a(ui-sref='base.configuration.domains({id: #{model}._id})') (add)]
-                        ignite-form-field-tooltip
-                            | Associate clusters with the current cache
-                        ignite-form-field-dropdown(
-                            data-id='domains'
-                            data-name='domains'
-                            data-options='domains'
-                            data-multiple='true'
-                            data-ng-model='#{model}.domains'
-                            data-ng-disabled='!domains.length'
-                            data-placeholder='{{ domains.length ? "Choose domain models": "No domain models configured" }}'
-                        )
-                .settings-row
-                    ignite-form-field
-                        ignite-form-field-label
-                            | Cache mode:
-                        ignite-form-field-tooltip
-                            | Cache modes:
-                            ul: li Partitioned - in this mode the overall key set will be divided into partitions and all partitions will be split equally between participating nodes
-                                li Replicated - in this mode all the keys are distributed to all participating nodes
-                                li Local - in this mode caches residing on different grid nodes will not know about each other
-                        ignite-form-field-dropdown(
-                        data-id='cacheMode'
-                        data-name='cacheMode'
-                        data-options='[\
-                            {value: "LOCAL", label: "LOCAL"},\
-                            {value: "REPLICATED", label: "REPLICATED"},\
-                            {value: "PARTITIONED", label: "PARTITIONED"}\
-                        ]'
-                        data-ng-model='#{model}.cacheMode'
-                        data-placeholder='PARTITIONED'
-                        )
+                    span(ng-if='#{evictionPolicyKind}')
+                        a.customize(ng-show='__.expanded' ng-click='__.expanded = false') Hide settings
+                        a.customize(ng-hide='__.expanded' ng-click='__.expanded = true') Show settings
+                        .panel-details.col-sm-12(ng-if='__.expanded')
+                            .details-row
+                                ignite-form-field(data-label='Batch size')
+                                    ignite-form-field-tooltip
+                                        | Number of entries to remove on shrink"
+                                    ignite-form-field-input-number(
+                                        data-id='nearEvictionPolicyBatchSize'
+                                        data-name='nearEvictionPolicyBatchSize'
+                                        data-ng-model='#{evictionPolicy}[#{evictionPolicyKind}].batchSize'
+                                        data-placeholder='1'
+                                    )
+                            .details-row
+                                ignite-form-field(data-label='Max memory size')
+                                    ignite-form-field-tooltip
+                                        | Maximum allowed cache size in bytes
+                                    ignite-form-field-input-number(
+                                        data-id='nearEvictionPolicyMaxMemorySize'
+                                        data-name='nearEvictionPolicyMaxMemorySize'
+                                        data-ng-model='#{evictionPolicy}[#{evictionPolicyKind}].maxMemorySize'
+                                        data-placeholder='0'
+                                    )
+                            .details-row
+                                ignite-form-field(data-label='Max size')
+                                    ignite-form-field-tooltip
+                                        | Maximum allowed size of cache before entry will start getting evicted
+                                    ignite-form-field-input-number(
+                                        data-id='nearEvictionPolicyMaxSize'
+                                        data-name='nearEvictionPolicyMaxSize'
+                                        data-ng-model='#{evictionPolicy}[#{evictionPolicyKind}].maxSize'
+                                        data-placeholder='100000'
+                                    )
             ignite-ui-ace.col-sm-6
                 .preview-panel(ng-init='mode = false')
                     .preview-legend

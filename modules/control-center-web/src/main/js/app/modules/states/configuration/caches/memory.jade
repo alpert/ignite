@@ -90,6 +90,37 @@ form.panel.panel-default(name='memory' novalidate)
                     span(ng-if='#{model}.evictionPolicy.kind')
                         a.customize(ng-show='__.expanded' ng-click='__.expanded = false') Hide settings
                         a.customize(ng-hide='__.expanded' ng-click='__.expanded = true') Show settings
+                        .panel-details.col-sm-12(ng-if='__.expanded')
+                            .details-row
+                                ignite-form-field(data-label='Batch size')
+                                    ignite-form-field-tooltip
+                                        | Number of entries to remove on shrink"
+                                    ignite-form-field-input-number(
+                                        data-id='batchSize'
+                                        data-name='batchSize'
+                                        data-ng-model='#{model}.evictionPolicy[#{model}.evictionPolicy.kind].batchSize'
+                                        data-placeholder='1'
+                                    )
+                            .details-row
+                                ignite-form-field(data-label='Max memory size')
+                                    ignite-form-field-tooltip
+                                        | Maximum allowed cache size in bytes
+                                    ignite-form-field-input-number(
+                                        data-id='maxMemorySize'
+                                        data-name='maxMemorySize'
+                                        data-ng-model='#{model}.evictionPolicy[#{model}.evictionPolicy.kind].maxMemorySize'
+                                        data-placeholder='0'
+                                    )
+                            .details-row
+                                ignite-form-field(data-label='Max size')
+                                    ignite-form-field-tooltip
+                                        | Maximum allowed size of cache before entry will start getting evicted
+                                    ignite-form-field-input-number(
+                                        data-id='maxSize'
+                                        data-name='maxSize'
+                                        data-ng-model='#{model}.evictionPolicy[#{model}.evictionPolicy.kind].maxSize'
+                                        data-placeholder='100000'
+                                    )
                 .settings-row
                     ignite-form-field
                         ignite-form-field-label
