@@ -621,6 +621,7 @@ public class CacheContinuousQueryManager extends GridCacheManagerAdapter {
 
     /**
      * @param locLsnr Local listener.
+     * @param types JCache event types.
      * @param bufSize Buffer size.
      * @param timeInterval Time interval.
      * @param autoUnsubscribe Auto unsubscribe flag.
@@ -634,7 +635,8 @@ public class CacheContinuousQueryManager extends GridCacheManagerAdapter {
      * @throws IgniteCheckedException In case of error.
      */
     private UUID executeJCacheQueryFactory(CacheEntryUpdatedListener locLsnr,
-        final JCacheRemoteQueryFactory rmtFilterFactory,
+        final Factory<CacheEntryEventFilter> rmtFilterFactory,
+        byte types,
         int bufSize,
         long timeInterval,
         boolean autoUnsubscribe,
@@ -647,6 +649,8 @@ public class CacheContinuousQueryManager extends GridCacheManagerAdapter {
         final boolean keepBinary,
         boolean ignoreClassNotFound) throws IgniteCheckedException
     {
+        assert types != 0 : types;
+
         cctx.checkSecurity(SecurityPermission.CACHE_READ);
 
         int taskNameHash = !internal && cctx.kernalContext().security().enabled() ?
@@ -654,7 +658,7 @@ public class CacheContinuousQueryManager extends GridCacheManagerAdapter {
 
         boolean skipPrimaryCheck = loc && cctx.config().getCacheMode() == CacheMode.REPLICATED && cctx.affinityNode();
 
-        boolean v2 = useV2Protocol(cctx.discovery().allNodes());
+        boolean v2 = rmtFilterFactory != null && useV2Protocol(cctx.discovery().allNodes());
 
         GridContinuousHandler hnd;
 
@@ -673,23 +677,28 @@ public class CacheContinuousQueryManager extends GridCacheManagerAdapter {
                 skipPrimaryCheck,
                 cctx.isLocal(),
                 keepBinary,
-                ignoreClassNotFound);
+                ignoreClassNotFound,
+                types);
         else {
-            JCacheQueryRemoteFilter fltr = null;
+            JCacheQueryRemoteFilter jCacheFilter;
+
+            CacheEntryEventFilter filter = null;
 
             if (rmtFilterFactory != null) {
-                fltr = rmtFilterFactory.create();
+                filter = rmtFilterFactory.create();
 
-                if (!(fltr.impl instanceof Serializable))
+                if (!(filter instanceof Serializable))
                     throw new IgniteCheckedException("Topology has nodes of the old versions. In this case " +
-                        "EntryEventFilter must implement java.io.Serializable interface. Filter: " + fltr.impl);
+                        "EntryEventFilter must implement java.io.Serializable interface. Filter: " + filter);
             }
+
+            jCacheFilter = new JCacheQueryRemoteFilter(filter, types);
 
             hnd = new CacheContinuousQueryHandler(
                 cctx.name(),
                 TOPIC_CACHE.topic(topicPrefix, cctx.localNodeId(), seq.getAndIncrement()),
                 locLsnr,
-                fltr,
+                jCacheFilter,
                 internal,
                 notifyExisting,
                 oldValRequired,
@@ -766,7 +775,8 @@ public class CacheContinuousQueryManager extends GridCacheManagerAdapter {
                 skipPrimaryCheck,
                 cctx.isLocal(),
                 keepBinary,
-                ignoreClassNotFound);
+                ignoreClassNotFound,
+                (byte)0);
         else {
             CacheEntryEventFilter fltr = null;
 
@@ -1025,7 +1035,8 @@ public class CacheContinuousQueryManager extends GridCacheManagerAdapter {
 
             routineId = executeJCacheQueryFactory(
                 locLsnr,
-                new JCacheRemoteQueryFactory(cfg.getCacheEntryEventFilterFactory(), types),
+                cfg.getCacheEntryEventFilterFactory(),
+                types,
                 ContinuousQuery.DFLT_PAGE_SIZE,
                 ContinuousQuery.DFLT_TIME_INTERVAL,
                 ContinuousQuery.DFLT_AUTO_UNSUBSCRIBE,
@@ -1139,7 +1150,7 @@ public class CacheContinuousQueryManager extends GridCacheManagerAdapter {
     /**
      * For handler version 2.0 this filter should not be serialized.
      */
-    private static class JCacheQueryRemoteFilter implements CacheEntryEventSerializableFilter, Externalizable {
+    protected static class JCacheQueryRemoteFilter implements CacheEntryEventSerializableFilter, Externalizable {
         /** */
         private static final long serialVersionUID = 0L;
 
@@ -1164,7 +1175,7 @@ public class CacheContinuousQueryManager extends GridCacheManagerAdapter {
          * @param impl Filter.
          * @param types Types.
          */
-        JCacheQueryRemoteFilter(CacheEntryEventFilter impl, byte types) {
+        JCacheQueryRemoteFilter(@Nullable CacheEntryEventFilter impl, byte types) {
             assert types != 0;
 
             this.impl = impl;
@@ -1217,34 +1228,6 @@ public class CacheContinuousQueryManager extends GridCacheManagerAdapter {
                 default:
                     throw new IllegalStateException("Unknown type: " + evtType);
             }
-        }
-    }
-
-    /**
-     *
-     */
-    protected static class JCacheRemoteQueryFactory implements Factory<CacheEntryEventFilter> {
-        /** */
-        private static final long serialVersionUID = 0L;
-
-        /** Factory. */
-        protected Factory<CacheEntryEventFilter> impl;
-
-        /** */
-        private byte types;
-
-        /**
-         * @param impl Factory.
-         * @param types Types.
-         */
-        public JCacheRemoteQueryFactory(@Nullable Factory<CacheEntryEventFilter> impl, byte types) {
-            this.impl = impl;
-            this.types = types;
-        }
-
-        /** {@inheritDoc} */
-        @Override public JCacheQueryRemoteFilter create() {
-            return new JCacheQueryRemoteFilter(impl != null ? impl.create() : null, types);
         }
     }
 

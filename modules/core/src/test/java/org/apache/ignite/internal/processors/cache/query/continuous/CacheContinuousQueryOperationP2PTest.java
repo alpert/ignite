@@ -17,28 +17,25 @@
 
 package org.apache.ignite.internal.processors.cache.query.continuous;
 
-import java.io.Serializable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import javax.cache.configuration.Factory;
 import javax.cache.configuration.FactoryBuilder;
 import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
+import javax.cache.event.CacheEntryCreatedListener;
 import javax.cache.event.CacheEntryEvent;
 import javax.cache.event.CacheEntryEventFilter;
-import javax.cache.event.CacheEntryListener;
 import javax.cache.event.CacheEntryListenerException;
 import javax.cache.event.CacheEntryUpdatedListener;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
-import org.apache.ignite.cache.CacheEntryEventSerializableFilter;
 import org.apache.ignite.cache.CacheMemoryMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.query.ContinuousQuery;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.TcpDiscoveryIpFinder;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
@@ -63,15 +60,6 @@ public class CacheContinuousQueryOperationP2PTest extends GridCommonAbstractTest
     private static final int NODES = 5;
 
     /** */
-    private static final int KEYS = 50;
-
-    /** */
-    private static final int VALS = 10;
-
-    /** */
-    public static final int ITERATION_CNT = 100;
-
-    /** */
     private boolean client;
 
     /** {@inheritDoc} */
@@ -87,8 +75,15 @@ public class CacheContinuousQueryOperationP2PTest extends GridCommonAbstractTest
     }
 
     /** {@inheritDoc} */
-    @Override protected void beforeTestsStarted() throws Exception {
-        super.beforeTestsStarted();
+    @Override protected void afterTestsStopped() throws Exception {
+        stopAllGrids();
+
+        super.afterTestsStopped();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
 
         startGridsMultiThreaded(NODES - 1);
 
@@ -98,10 +93,10 @@ public class CacheContinuousQueryOperationP2PTest extends GridCommonAbstractTest
     }
 
     /** {@inheritDoc} */
-    @Override protected void afterTestsStopped() throws Exception {
-        stopAllGrids();
+    @Override protected void afterTest() throws Exception {
+        super.afterTest();
 
-        super.afterTestsStopped();
+        stopAllGrids();
     }
 
     /**
@@ -228,11 +223,14 @@ public class CacheContinuousQueryOperationP2PTest extends GridCommonAbstractTest
 
         ContinuousQuery<Integer, Integer> qry = new ContinuousQuery<>();
 
-        CacheEntryUpdatedListener<Integer, Integer> localLsnr = new CacheEntryUpdatedListener<Integer, Integer>() {
-            @Override public void onUpdated(Iterable<CacheEntryEvent<? extends Integer,
-                ? extends Integer>> evts) throws CacheEntryListenerException {
-                for (CacheEntryEvent<? extends Integer, ? extends Integer> evt : evts)
+        TestLocalListener localLsnr = new TestLocalListener() {
+            @Override public void onEvent(Iterable<CacheEntryEvent<? extends Integer, ? extends Integer>> evts)
+                throws CacheEntryListenerException {
+                for (CacheEntryEvent<? extends Integer, ? extends Integer> evt : evts) {
                     latch.countDown();
+
+                    log.info("Received event: " + evt);
+                }
             }
         };
 
@@ -258,7 +256,7 @@ public class CacheContinuousQueryOperationP2PTest extends GridCommonAbstractTest
             else
                 cache = grid(rnd.nextInt(NODES - 1)).cache(ccfg.getName());
 
-            //cur = cache.query(qry);
+            cur = cache.query(qry);
 
             cache.registerCacheEntryListener(lsnrCfg);
 
@@ -306,89 +304,23 @@ public class CacheContinuousQueryOperationP2PTest extends GridCommonAbstractTest
     /**
      *
      */
-    public static class QueryTestKey implements Serializable, Comparable {
-        /** */
-        private final Integer key;
+    private static abstract class TestLocalListener implements CacheEntryUpdatedListener<Integer, Integer>,
+        CacheEntryCreatedListener<Integer, Integer> {
+        /** {@inheritDoc} */
+        @Override public void onCreated(Iterable<CacheEntryEvent<? extends Integer, ? extends Integer>> evts)
+            throws CacheEntryListenerException {
+            onEvent(evts);
+        }
+
+        /** {@inheritDoc} */
+        @Override public void onUpdated(Iterable<CacheEntryEvent<? extends Integer, ? extends Integer>> evts)
+            throws CacheEntryListenerException {
+            onEvent(evts);
+        }
 
         /**
-         * @param key Key.
+         * @param evts Events.
          */
-        public QueryTestKey(Integer key) {
-            this.key = key;
-        }
-
-        /** {@inheritDoc} */
-        @Override public boolean equals(Object o) {
-            if (this == o)
-                return true;
-
-            if (o == null || getClass() != o.getClass())
-                return false;
-
-            QueryTestKey that = (QueryTestKey)o;
-
-            return key.equals(that.key);
-        }
-
-        /** {@inheritDoc} */
-        @Override public int hashCode() {
-            return key.hashCode();
-        }
-
-        /** {@inheritDoc} */
-        @Override public String toString() {
-            return S.toString(QueryTestKey.class, this);
-        }
-
-        /** {@inheritDoc} */
-        @Override public int compareTo(Object o) {
-            return key - ((QueryTestKey)o).key;
-        }
-    }
-
-    /**
-     *
-     */
-    public static class QueryTestValue implements Serializable {
-        /** */
-        protected final Integer val1;
-
-        /** */
-        protected final String val2;
-
-        /**
-         * @param val Value.
-         */
-        public QueryTestValue(Integer val) {
-            this.val1 = val;
-            this.val2 = String.valueOf(val);
-        }
-
-        /** {@inheritDoc} */
-        @Override public boolean equals(Object o) {
-            if (this == o)
-                return true;
-
-            if (o == null || getClass() != o.getClass())
-                return false;
-
-            QueryTestValue that = (QueryTestValue) o;
-
-            return val1.equals(that.val1) && val2.equals(that.val2);
-        }
-
-        /** {@inheritDoc} */
-        @Override public int hashCode() {
-            int res = val1.hashCode();
-
-            res = 31 * res + val2.hashCode();
-
-            return res;
-        }
-
-        /** {@inheritDoc} */
-        @Override public String toString() {
-            return S.toString(QueryTestValue.class, this);
-        }
+        protected abstract void onEvent(Iterable<CacheEntryEvent<? extends Integer, ? extends Integer>> evts);
     }
 }

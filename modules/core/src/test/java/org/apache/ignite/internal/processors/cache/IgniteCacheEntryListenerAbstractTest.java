@@ -539,16 +539,16 @@ public abstract class IgniteCacheEntryListenerAbstractTest extends IgniteCacheAb
     /**
      * @throws Exception If failed.
      */
-    public void _testEventsObjectKeyValue() throws Exception {
+    public void testEventsObjectKeyValue() throws Exception {
         useObjects = true;
 
-        _testEvents();
+        testEvents();
     }
 
     /**
      * @throws Exception If failed.
      */
-    public void _testEvents() throws Exception {
+    public void testEvents() throws Exception {
         IgniteCache<Object, Object> cache = jcache();
 
         Map<Object, Object> vals = new HashMap<>();

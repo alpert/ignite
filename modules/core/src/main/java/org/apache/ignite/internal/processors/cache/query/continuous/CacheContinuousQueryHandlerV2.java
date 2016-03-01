@@ -27,12 +27,11 @@ import javax.cache.event.CacheEntryEventFilter;
 import javax.cache.event.CacheEntryUpdatedListener;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.IgniteDeploymentCheckedException;
-import org.apache.ignite.internal.managers.deployment.GridDeployment;
-import org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryManager.JCacheRemoteQueryFactory;
+import org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryManager.JCacheQueryRemoteFilter;
 import org.apache.ignite.internal.processors.continuous.GridContinuousHandler;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Continuous query handler V2 version. Contains {@link Factory} for remote listener.
@@ -46,6 +45,9 @@ public class CacheContinuousQueryHandlerV2<K, V> extends CacheContinuousQueryHan
 
     /** Deployable object for filter factory. */
     private DeployableObject rmtFilterFactoryDep;
+
+    /** Event types for JCache API. */
+    private byte types = 0;
 
     /** */
     protected transient CacheEntryEventFilter filter;
@@ -73,6 +75,7 @@ public class CacheContinuousQueryHandlerV2<K, V> extends CacheContinuousQueryHan
      * @param taskHash Task name hash code.
      * @param locCache {@code True} if local cache.
      * @param keepBinary Keep binary flag.
+     * @param types Event types.
      */
     public CacheContinuousQueryHandlerV2(
         String cacheName,
@@ -88,7 +91,8 @@ public class CacheContinuousQueryHandlerV2<K, V> extends CacheContinuousQueryHan
         boolean skipPrimaryCheck,
         boolean locCache,
         boolean keepBinary,
-        boolean ignoreClsNotFound) {
+        boolean ignoreClsNotFound,
+        @Nullable Byte types) {
         super(cacheName,
             topic,
             locLsnr,
@@ -107,12 +111,18 @@ public class CacheContinuousQueryHandlerV2<K, V> extends CacheContinuousQueryHan
         assert rmtFilterFactory != null;
 
         this.rmtFilterFactory = rmtFilterFactory;
+
+        if (types != null)
+            this.types = types;
     }
 
     /** {@inheritDoc} */
     @Override public CacheEntryEventFilter getEventFilter() {
         if (filter == null) {
             assert rmtFilterFactory != null;
+
+            if (types != 0)
+                rmtFilterFactory = new JCacheRemoteQueryFactory(rmtFilterFactory, types);
 
             filter = rmtFilterFactory.create();
         }
@@ -158,6 +168,8 @@ public class CacheContinuousQueryHandlerV2<K, V> extends CacheContinuousQueryHan
             out.writeObject(rmtFilterFactoryDep);
         else
             out.writeObject(rmtFilterFactory);
+
+        out.writeByte(types);
     }
 
     /** {@inheritDoc} */
@@ -171,5 +183,35 @@ public class CacheContinuousQueryHandlerV2<K, V> extends CacheContinuousQueryHan
             rmtFilterFactoryDep = (DeployableObject)in.readObject();
         else
             rmtFilterFactory = (Factory)in.readObject();
+
+        types = in.readByte();
+    }
+
+    /**
+     *
+     */
+    private static class JCacheRemoteQueryFactory implements Factory<CacheEntryEventFilter> {
+        /** */
+        private static final long serialVersionUID = 0L;
+
+        /** Factory. */
+        protected Factory<? extends CacheEntryEventFilter> impl;
+
+        /** */
+        private byte types;
+
+        /**
+         * @param impl Factory.
+         * @param types Types.
+         */
+        public JCacheRemoteQueryFactory(@Nullable Factory<? extends CacheEntryEventFilter> impl, byte types) {
+            this.impl = impl;
+            this.types = types;
+        }
+
+        /** {@inheritDoc} */
+        @Override public JCacheQueryRemoteFilter create() {
+            return new JCacheQueryRemoteFilter(impl != null ? impl.create() : null, types);
+        }
     }
 }
