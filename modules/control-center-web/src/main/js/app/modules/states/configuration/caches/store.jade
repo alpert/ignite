@@ -28,6 +28,9 @@ form.panel.panel-default(name='store' novalidate)
         .panel-body
             .col-sm-6
                 .settings-row
+                    -var storeFactory = model + '.cacheStoreFactory';
+                    -var storeFactoryKind = storeFactory + '.kind';
+
                     ignite-form-field
                         ignite-form-field-label
                             | Store factory:
@@ -42,8 +45,54 @@ form.panel.panel-default(name='store' novalidate)
                                 {value: "CacheHibernateBlobStoreFactory", label: "Hibernate BLOB store factory"},\
                                 {value: undefined, label: "Not set"}\
                             ]'
-                            data-ng-model='#{model}.cacheStoreFactory.kind'
+                            data-ng-model='#{storeFactoryKind}'
                         )
+                    span(ng-if='#{storeFactoryKind}')
+                            a.customize(ng-show='__.expanded' ng-click='__.expanded = false') Hide settings
+                            a.customize(ng-hide='__.expanded' ng-click='__.expanded = true') Show settings
+                            .panel-details.col-sm-12(ng-if='__.expanded')
+                                div(ng-if='#{storeFactoryKind} === "CacheJdbcPojoStoreFactory"')
+                                    .details-row
+                                        ignite-form-field
+                                            ignite-form-field-label
+                                                | Data source bean name:
+                                            ignite-form-field-tooltip
+                                                | Name of the data source bean in Spring context
+                                            ignite-form-field-input-text(
+                                                data-id='dataSourceBean'
+                                                data-name='dataSourceBean'
+                                                data-ng-model='#{storeFactory}[#{storeFactoryKind}].dataSourceBean'
+                                                data-ng-required='true'
+                                                data-placeholder='Bean name in Spring context'
+                                            )
+                                    .details-row
+                                        ignite-form-field
+                                            ignite-form-field-label
+                                                | Dialect:
+                                            ignite-form-field-tooltip
+                                                | Dialect of SQL implemented by a particular RDBMS:
+                                                ul: li Generic JDBC dialect
+                                                    li Oracle database
+                                                    li IBM DB2
+                                                    li Microsoft SQL Server
+                                                    li MySQL
+                                                    li PostgreSQL
+                                                    li H2 database
+                                            ignite-form-field-dropdown(
+                                                data-id='pojoDialect'
+                                                data-name='pojoDialect'
+                                                data-options='[\
+                                                    {value: "Generic", label: "Generic JDBC"},\
+                                                    {value: "Oracle", label: "Oracle"},\
+                                                    {value: "DB2", label: "IBM DB2"},\
+                                                    {value: "SQLServer", label: "Microsoft SQL Server"},\
+                                                    {value: "MySQL", label: "MySQL"},\
+                                                    {value: "PostgreSQL", label: "PostgreSQL"},\
+                                                    {value: "H2", label: "H2 database"},\
+                                                    {value: undefined, label: "Not set"}\
+                                                ]'
+                                                data-ng-model='#{storeFactory}[#{storeFactoryKind}].dialect'
+                                            )
                 .settings-row
                     ignite-form-field.checkbox
                         ignite-form-field-input-checkbox(
