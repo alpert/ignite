@@ -17,6 +17,76 @@
 - var model = 'backupItem'
 - var form = 'writeBehind'
 
+mixin checkbox(mdl, name, lbl, tip)
+    ignite-form-field.checkbox
+        ignite-form-field-input-checkbox(
+            data-id='#{name}'
+            data-name='#{name}'
+            data-ng-model='#{mdl}.#{name}'
+        )
+        | #{lbl}
+        ignite-form-field-tooltip
+            | !{tip}
+
+mixin text(mdl, name, lbl, tip, plc, req)
+    ignite-form-field
+        ignite-form-field-label
+            | #{lbl}
+        ignite-form-field-tooltip
+            | !{tip}
+        ignite-form-field-input-text(
+            data-id='#{name}'
+            data-name='#{name}'
+            data-ng-model='#{mdl}.#{name}'
+            data-placeholder='#{plc}'
+            data-ng-required=req
+        )
+
+mixin number(mdl, name, lbl, enabled, plc, min, tip)
+    ignite-form-field
+        ignite-form-field-label
+            | #{lbl}
+        ignite-form-field-tooltip
+            | !{tip}
+        ignite-form-field-input-number(
+            data-id='#{name}'
+            data-name='#{name}'
+            data-ng-model='#{mdl}.#{name}'
+            data-ng-disabled='!#{enabled}'
+            data-placeholder='#{plc}'
+            data-min='#{min}'
+        )
+
+mixin dialect(mdl, name, lbl, tipTitle, genericName)
+    ignite-form-field
+        ignite-form-field-label
+            | #{lbl}
+        ignite-form-field-tooltip
+            | #{tipTitle}
+            ul: li #{genericName}
+                li Oracle database
+                li IBM DB2
+                li Microsoft SQL Server
+                li MySQL
+                li PostgreSQL
+                li H2 database
+        ignite-form-field-dropdown(
+            data-id='#{name}'
+            data-name='#{name}'
+            data-options='[\
+                {value: "Generic", label: "#{genericName}"},\
+                {value: "Oracle", label: "Oracle"},\
+                {value: "DB2", label: "IBM DB2"},\
+                {value: "SQLServer", label: "Microsoft SQL Server"},\
+                {value: "MySQL", label: "MySQL"},\
+                {value: "PostgreSQL", label: "PostgreSQL"},\
+                {value: "H2", label: "H2 database"},\
+                {value: undefined, label: "Not set"}\
+            ]'
+            data-ng-model='#{mdl}.dialect'
+            data-ng-required='true'
+        )
+
 form.panel.panel-default(name='store' novalidate)
     .panel-heading(bs-collapse-toggle)
         ignite-form-panel-chevron
@@ -52,95 +122,70 @@ form.panel.panel-default(name='store' novalidate)
                             a.customize(ng-hide='__.expanded' ng-click='__.expanded = true') Show settings
                             .panel-details.col-sm-12(ng-if='__.expanded')
                                 div(ng-if='#{storeFactoryKind} === "CacheJdbcPojoStoreFactory"')
+                                    -var pojoStoreFactory = storeFactory + '.CacheJdbcPojoStoreFactory'
+
+                                    .details-row
+                                        +text(pojoStoreFactory, 'dataSourceBean', 'Data source bean name:', 'Name of the data source bean in Spring context', 'Bean name in Spring context', true)
+                                    .details-row
+                                        +dialect(pojoStoreFactory, 'pojoDialect', 'Dialect', 'Dialect of SQL implemented by a particular RDBMS:', 'Generic JDBC dialect')
+                                div(ng-if='#{storeFactoryKind} === "CacheJdbcBlobStoreFactory"')
+                                    -var blobStoreFactory = storeFactory + '.CacheJdbcBlobStoreFactory'
+
                                     .details-row
                                         ignite-form-field
                                             ignite-form-field-label
-                                                | Data source bean name:
+                                                | Connect via:
                                             ignite-form-field-tooltip
-                                                | Name of the data source bean in Spring context
-                                            ignite-form-field-input-text(
-                                                data-id='dataSourceBean'
-                                                data-name='dataSourceBean'
-                                                data-ng-model='#{storeFactory}[#{storeFactoryKind}].dataSourceBean'
-                                                data-ng-required='true'
-                                                data-placeholder='Bean name in Spring context'
-                                            )
-                                    .details-row
-                                        ignite-form-field
-                                            ignite-form-field-label
-                                                | Dialect:
-                                            ignite-form-field-tooltip
-                                                | Dialect of SQL implemented by a particular RDBMS:
-                                                ul: li Generic JDBC dialect
-                                                    li Oracle database
-                                                    li IBM DB2
-                                                    li Microsoft SQL Server
-                                                    li MySQL
-                                                    li PostgreSQL
-                                                    li H2 database
+                                                | You can connect to database via:
+                                                ul: li JDBC URL, for example: jdbc:h2:mem:myDatabase
+                                                    li Сonfigured data source
                                             ignite-form-field-dropdown(
-                                                data-id='pojoDialect'
-                                                data-name='pojoDialect'
+                                                data-id='connectVia'
+                                                data-name='connectVia'
                                                 data-options='[\
-                                                    {value: "Generic", label: "Generic JDBC"},\
-                                                    {value: "Oracle", label: "Oracle"},\
-                                                    {value: "DB2", label: "IBM DB2"},\
-                                                    {value: "SQLServer", label: "Microsoft SQL Server"},\
-                                                    {value: "MySQL", label: "MySQL"},\
-                                                    {value: "PostgreSQL", label: "PostgreSQL"},\
-                                                    {value: "H2", label: "H2 database"},\
-                                                    {value: undefined, label: "Not set"}\
+                                                    {value: "URL", label: "URL"},\
+                                                    {value: "DataSource", label: "Data source"}\
                                                 ]'
-                                                data-ng-model='#{storeFactory}[#{storeFactoryKind}].dialect'
+                                                data-ng-model='#{blobStoreFactory}.connectVia'
                                             )
+                                    div(ng-if='#{blobStoreFactory}.connectVia === "URL"')
+                                        .details-row
+                                            +text(blobStoreFactory, 'connectionUrl', 'Connection URL:', 'URL for database access, for example: jdbc:h2:mem:myDatabase', 'Input URL', true)
+                                        .details-row
+                                            +text(blobStoreFactory, 'user', 'User:', 'User name for database access', 'Input user name', true)
+                                        .details-row
+                                            label Note, password will be generated as stub
+                                    div(ng-if='#{blobStoreFactory}.connectVia !== "URL"')
+                                        .details-row
+                                            +text(blobStoreFactory, 'dataSourceBean', 'Data source bean name:', 'Name of the data source bean in Spring context', 'Bean name in Spring context', true)
+                                        .details-row
+                                            +dialect(blobStoreFactory, 'blobDialect', 'Dialect', 'Database:', 'Generic database')
+                                    .details-row
+                                        +checkbox(blobStoreFactory, 'initSchema', 'Init schema',
+                                            'Flag indicating whether DB schema should be initialized by Ignite (default behaviour) or was explicitly created by user'
+                                        )
+                                div(ng-if='#{storeFactoryKind} === "CacheHibernateBlobStoreFactory"')
+                                    .details-row
                 .settings-row
-                    ignite-form-field.checkbox
-                        ignite-form-field-input-checkbox(
-                            data-id='storeKeepBinary'
-                            data-name='storeKeepBinary'
-                            data-ng-model='#{model}.storeKeepBinary'
-                        )
-                        | Keep binary in store
-                        ignite-form-field-tooltip
-                            | Flag indicating that CacheStore implementation is working with binary objects instead of Java objects
+                    +checkbox(model, 'storeKeepBinary', 'Keep binary in store', 'Flag indicating that CacheStore implementation is working with binary objects instead of Java objects')
                 .settings-row
-                    ignite-form-field.checkbox
-                        ignite-form-field-input-checkbox(
-                            data-id='loadPreviousValue'
-                            data-name='loadPreviousValue'
-                            data-ng-model='#{model}.loadPreviousValue'
-                        )
-                        | Load previous value
-                        ignite-form-field-tooltip
-                            | Flag indicating whether value should be loaded from store if it is not in the cache for following cache operations:",
-                            ul: li IgniteCache.putIfAbsent()
-                                li IgniteCache.replace()
-                                li IgniteCache.replace()
-                                li IgniteCache.remove()
-                                li IgniteCache.getAndPut()
-                                li IgniteCache.getAndRemove()
-                                li IgniteCache.getAndReplace()
-                                li IgniteCache.getAndPutIfAbsent()
+                    +checkbox(model, 'loadPreviousValue', 'Load previous value',
+                        'Flag indicating whether value should be loaded from store if it is not in the cache for following cache operations: \
+                        <ul> \
+                        <li>IgniteCache.putIfAbsent()</li> \
+                        <li>IgniteCache.replace()</li> \
+                        <li>IgniteCache.replace()</li> \
+                        <li>IgniteCache.remove()</li> \
+                        <li>IgniteCache.getAndPut()</li> \
+                        <li>IgniteCache.getAndRemove()</li> \
+                        <li>IgniteCache.getAndReplace()</li> \
+                        <li> IgniteCache.getAndPutIfAbsent()</li>\
+                        </ul>'
+                    )
                 .settings-row
-                    ignite-form-field.checkbox
-                        ignite-form-field-input-checkbox(
-                            data-id='readThrough'
-                            data-name='readThrough'
-                            data-ng-model='#{model}.readThrough'
-                        )
-                        | Read-through
-                        ignite-form-field-tooltip
-                            | Flag indicating whether read-through caching should be used
+                    +checkbox(model, 'readThrough', 'Read-through', 'Flag indicating whether read-through caching should be used')
                 .settings-row
-                    ignite-form-field.checkbox
-                        ignite-form-field-input-checkbox(
-                            data-id='writeThrough'
-                            data-name='writeThrough'
-                            data-ng-model='#{model}.writeThrough'
-                        )
-                        | Write-through
-                        ignite-form-field-tooltip
-                            | Flag indicating whether write-through caching should be used
+                    +checkbox(model, 'writeThrough', 'Write-through', 'Flag indicating whether write-through caching should be used')
                 .settings-row
                     ignite-form-group(ng-model='#{model}' ng-form='#{form}')
                         ignite-form-field-label
@@ -149,46 +194,18 @@ form.panel.panel-default(name='store' novalidate)
                             | Cache write behind settings#[br]
                             | Write-behind is a special mode when updates to cache accumulated and then asynchronously flushed to persistent store as a bulk operation
                         .group-content
+                            -var enabled = model + '.writeBehindEnabled'
+
                             .details-row
-                                ignite-form-field.checkbox
-                                    ignite-form-field-input-checkbox(
-                                        data-id='writeBehindEnabled'
-                                        data-name='writeBehindEnabled'
-                                        data-ng-model='#{model}.writeBehindEnabled'
-                                    )
-                                    | Enabled
-                                    ignite-form-field-tooltip
-                                        | Flag indicating whether Ignite should use write-behind behaviour for the cache store
+                                +checkbox(model, 'writeBehindEnabled', 'Enabled', 'Flag indicating whether Ignite should use write-behind behaviour for the cache store')
                             .details-row
-                                ignite-form-field
-                                    ignite-form-field-label
-                                        | Batch size:
-                                    ignite-form-field-tooltip
-                                        | Maximum batch size for write-behind cache store operations#[br]
-                                        | Store operations (get or remove) are combined in a batch of this size to be passed to cache store
-                                    ignite-form-field-input-number(
-                                        data-id='writeBehindBatchSize'
-                                        data-name='writeBehindBatchSize'
-                                        data-ng-model='#{model}.writeBehindBatchSize'
-                                        data-ng-disabled='!#{model}.writeBehindEnabled'
-                                        data-placeholder='512'
-                                        data-min='1'
-                                    )
+                                +number(model, 'writeBehindBatchSize', 'Batch size:', enabled, '512', '1',
+                                    'Maximum batch size for write - behind cache store operations<br/>\
+                                     Store operations(get or remove) are combined in a batch of this size to be passed to cache store')
                             .details-row
-                                ignite-form-field
-                                    ignite-form-field-label
-                                        | Flush size:
-                                    ignite-form-field-tooltip
-                                        | Maximum size of the write-behind cache#[br]
-                                        | If cache size exceeds this value, all cached items are flushed to the cache store and write cache is cleared
-                                    ignite-form-field-input-number(
-                                        data-id='writeBehindFlushSize'
-                                        data-name='writeBehindFlushSize'
-                                        data-ng-model='#{model}.writeBehindFlushSize'
-                                        data-ng-disabled='!#{model}.writeBehindEnabled'
-                                        data-placeholder='10240'
-                                        data-min='1'
-                                    )
+                                +number(model, 'writeBehindFlushSize', 'Flush size:', enabled, '10240', '1',
+                                    'Maximum size of the write-behind cache<br/>\
+                                     If cache size exceeds this value, all cached items are flushed to the cache store and write cache is cleared')
                             .details-row
                                 ignite-form-field
                                     ignite-form-field-label

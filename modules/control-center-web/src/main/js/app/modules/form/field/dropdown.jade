@@ -29,6 +29,8 @@
         ng-class='{ placeholder: value === undefined || value === null || !value.length }'
         ng-disabled='dropdown.ngDisabled'
 
+        data-ng-required='required || false'
+
         tabindex='0'
     )
 
@@ -44,6 +46,8 @@
         ng-model='dropdown.value'
         ng-class='{ placeholder: value === undefined || value === null || !value.length }'
         ng-disabled='dropdown.ngDisabled'
+
+        data-ng-required='required || false'
 
         tabindex='0'
     )
