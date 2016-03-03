@@ -101,8 +101,7 @@ module.exports.factory = (_, express, mongo) => {
                             return mongo.Cache.update({_id: {$in: caches}}, {$addToSet: {domains: savedDomain._id}}, {multi: true}).exec();
                         })
                         .then(() => _updateCacheStore(cacheStoreChanges));
-                })
-                .catch((err) => mongo.handleError(res, err));
+                });
         };
 
         const _save = (domains, res) => {
