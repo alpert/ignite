@@ -55,6 +55,7 @@ export default ['igniteFormFieldDropdown', ['IgniteFormGUID', (guid) => {
         bindToController: {
             value: '=ngModel',
             placeholder: '@',
+            required: '=ngRequired',
             options: '=',
             ngDisabled: '=',
             multiple: '='

@@ -125,9 +125,9 @@ form.panel.panel-default(name='store' novalidate)
                                     -var pojoStoreFactory = storeFactory + '.CacheJdbcPojoStoreFactory'
 
                                     .details-row
-                                        +text(pojoStoreFactory, 'dataSourceBean', 'Data source bean name:', 'Name of the data source bean in Spring context', 'Bean name in Spring context', true)
+                                        +text(pojoStoreFactory, 'dataSourceBean', 'Data source bean name:', 'Name of the data source bean in Spring context', 'Bean name in Spring context', 'true')
                                     .details-row
-                                        +dialect(pojoStoreFactory, 'pojoDialect', 'Dialect', 'Dialect of SQL implemented by a particular RDBMS:', 'Generic JDBC dialect')
+                                        +dialect(pojoStoreFactory, 'pojoDialect', 'Dialect:', 'Dialect of SQL implemented by a particular RDBMS:', 'Generic JDBC dialect')
                                 div(ng-if='#{storeFactoryKind} === "CacheJdbcBlobStoreFactory"')
                                     -var blobStoreFactory = storeFactory + '.CacheJdbcBlobStoreFactory'
 
