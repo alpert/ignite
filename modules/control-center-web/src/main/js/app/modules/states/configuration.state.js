@@ -136,10 +136,8 @@ angular
         data: {
             loading: 'Loading clusters screen...'
         },
-        resolve: {
-            $title: () => {
-                return 'Configure Clusters';
-            }
+        metaTags: {
+            title: 'Configure Clusters'
         }
     })
     .state('base.configuration.caches', {
@@ -151,10 +149,8 @@ angular
         data: {
             loading: 'Loading caches screen...'
         },
-        resolve: {
-            $title: () => {
-                return 'Configure Caches';
-            }
+        metaTags: {
+            title: 'Configure Caches'
         }
     })
     .state('base.configuration.domains', {
@@ -166,10 +162,8 @@ angular
         data: {
             loading: 'Loading domain models screen...'
         },
-        resolve: {
-            $title: () => {
-                return 'Configure Domain Model';
-            }
+        metaTags: {
+            title: 'Configure Domain Model'
         }
     })
     .state('base.configuration.igfs', {
@@ -181,10 +175,8 @@ angular
         data: {
             loading: 'Loading IGFS screen...'
         },
-        resolve: {
-            $title: () => {
-                return 'Configure IGFS';
-            }
+        metaTags: {
+            title: 'Configure IGFS'
         }
     })
     .state('base.configuration.summary', {
@@ -195,10 +187,8 @@ angular
         data: {
             loading: 'Loading summary screen...'
         },
-        resolve: {
-            $title: () => {
-                return 'Configurations Summary';
-            }
+        metaTags: {
+            title: 'Configurations Summary'
         }
     });
 }]);
